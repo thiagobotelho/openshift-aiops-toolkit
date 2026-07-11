@@ -1,0 +1,8 @@
+severity:
+  critical: {label: Crítica}
+  high: {label: Alta}
+  medium: {label: Média}
+  low: {label: Baixa}
+  informational: {label: Informativa}
+confidence: [Confirmada, Alta, Média, Baixa, Inconclusiva]
+status: [Aberto, Em análise, Confirmado, Mitigado, Resolvido, Monitoramento, Sem evidência suficiente]

@@ -1,0 +1,7 @@
+environment: development
+confirmation_required: false
+timeout_seconds: 45
+max_log_tail: 300
+retention_days: 7
+audit_level: standard
+must_gather: optional

@@ -1,0 +1,7 @@
+environment: homologation
+confirmation_required: false
+timeout_seconds: 60
+max_log_tail: 500
+retention_days: 15
+audit_level: detailed
+must_gather: optional

@@ -1,0 +1,10 @@
+readonly_allowlist:
+  oc: [config current-context, whoami, version, get, describe, logs, auth can-i, adm top, adm inspect, adm must-gather]
+blocked_commands_catalog:
+  oc: [delete, apply, create, patch, edit, replace, scale, expose, set, annotate, label, exec, rsh, debug, attach, cp, rsync, port-forward]
+  oc_adm: [drain, cordon, uncordon, taint, policy, groups, certificate approve, certificate deny]
+  kubectl: [apply, delete, patch, edit, exec, debug]
+  crc: [delete, cleanup, stop, start]
+secret_policy:
+  forbidden_resources: [secrets, secret]
+  allowed_reference_only: true

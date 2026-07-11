@@ -1,0 +1,22 @@
+toolkit:
+  name: openshift-aiops-toolkit
+  version_file: VERSION
+  readonly: true
+  audit_log: logs/audit.jsonl
+  output_dir: evidencias
+  reports_dir: relatorios
+  max_output_bytes: 1048576
+  default_timeout_seconds: 60
+  default_log_tail: 300
+  sanitize: true
+  umask: "077"
+mcp:
+  name: openshift-readonly
+  transport: stdio
+  startup_timeout_sec: 20
+  tool_timeout_sec: 120
+  expose_generic_terminal: false
+production:
+  require_explicit_confirmation: true
+  require_cluster_name_confirmation: true
+  never_modify_resources: true

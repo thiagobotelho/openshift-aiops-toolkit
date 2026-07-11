@@ -1,0 +1,4 @@
+sanitization:
+  replacement: "[REDACTED]"
+  redact: [bearer_tokens, authorization_headers, access_token, refresh_token, id_token, client_secret, password, cookies, private_keys, long_base64, url_credentials, kubeconfig_tokens, registry_authentication]
+  preserve: [pod_names, namespaces, operators, statuses, timestamps, versions]

@@ -1,0 +1,7 @@
+[mcp_servers.openshift-readonly]
+command = "/CAMINHO/ABSOLUTO/openshift-aiops-toolkit/.venv/bin/python"
+args = ["-m", "mcp_server.server"]
+cwd = "/CAMINHO/ABSOLUTO/openshift-aiops-toolkit"
+startup_timeout_sec = 20
+tool_timeout_sec = 120
+enabled = true

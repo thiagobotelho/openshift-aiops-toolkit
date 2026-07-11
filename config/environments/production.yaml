@@ -1,0 +1,8 @@
+environment: production
+confirmation_required: true
+timeout_seconds: 90
+max_log_tail: 200
+retention_days: 30
+audit_level: strict
+must_gather: manual-confirmation-only
+require_cluster_name_confirmation: true

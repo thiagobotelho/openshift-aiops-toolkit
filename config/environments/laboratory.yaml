@@ -1,0 +1,8 @@
+environment: laboratory
+confirmation_required: false
+timeout_seconds: 30
+max_log_tail: 200
+retention_days: 3
+audit_level: standard
+must_gather: optional
+notes: Perfil para CRC/OpenShift Local e laboratórios descartáveis.

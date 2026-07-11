@@ -1,0 +1,9 @@
+collectors:
+  identity: {enabled: true}
+  operators: {enabled: true}
+  workloads: {enabled: true, collect_logs: true, max_tail: 300}
+  storage: {enabled: true}
+  network: {enabled: true}
+  monitoring: {enabled: true}
+  secrets: {enabled: false, policy: never collect secret contents}
+  must_gather: {enabled: manual-confirmation-only}

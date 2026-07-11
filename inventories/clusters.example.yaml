@@ -1,0 +1,25 @@
+clusters:
+  - name: cluster-dev
+    environment: development
+    context: dev-context
+    kubeconfig: ~/.kube/config
+    api_server: https://api.cluster-dev.example.com:6443
+    enabled: true
+  - name: cluster-hml
+    environment: homologation
+    context: hml-context
+    kubeconfig: ~/.kube/config
+    api_server: https://api.cluster-hml.example.com:6443
+    enabled: true
+  - name: cluster-prd
+    environment: production
+    context: prd-context
+    kubeconfig: ~/.kube/config
+    api_server: https://api.cluster-prd.example.com:6443
+    enabled: true
+  - name: crc-lab
+    environment: laboratory
+    context: crc-admin
+    kubeconfig: ~/.kube/config
+    api_server: https://api.crc.testing:6443
+    enabled: false
