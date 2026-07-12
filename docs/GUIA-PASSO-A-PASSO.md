@@ -38,7 +38,7 @@ python3 -m pip --version
 ## 2. Clonar o repositório
 
 ```bash
-git clone https://github.com/<usuario-ou-org>/openshift-aiops-toolkit.git
+git clone https://github.com/thiagobotelho/openshift-aiops-toolkit.git
 cd openshift-aiops-toolkit
 ```
 
