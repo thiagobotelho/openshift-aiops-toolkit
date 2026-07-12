@@ -136,9 +136,17 @@ make check-cluster ENVIRONMENT=laboratory CLUSTER=crc-lab
 
 Esse comando é consultivo.
 
-## 7. Coleta geral de evidências
+## 7. Coleta completa segura de evidências
 
-Essa é a primeira coleta recomendada. Ela já consulta o cluster de forma ampla e registra uma visão geral de:
+Quando a intenção é fazer uma coleta completa do estado do cluster pelo toolkit, use este fluxo.
+
+Neste projeto, "coleta completa segura" significa coletar uma visão ampla e reproduzível do cluster sem sair capturando YAML detalhado e logs de todos os pods. Essa escolha é proposital: logs e objetos completos de todos os workloads podem gerar muito volume e podem carregar dados sensíveis.
+
+Para uma coleta exaustiva no padrão de suporte OpenShift, use o fluxo controlado de `must-gather` da seção 13.
+
+### 7.1 Executar a coleta principal
+
+Essa é a primeira coleta recomendada. Ela consulta o cluster de forma ampla e registra:
 
 - identidade, API e versão do cluster;
 - ClusterOperators;
@@ -149,14 +157,19 @@ Essa é a primeira coleta recomendada. Ela já consulta o cluster de forma ampla
 - routes e services;
 - regras de monitoring.
 
-Ela não coleta YAML e logs de todos os pods por padrão. Isso é intencional: em clusters maiores, uma coleta profunda de todos os recursos gera muito volume, aumenta o risco de capturar dados sensíveis e dificulta a análise.
-
 ```bash
 scripts/coletar-cluster.sh \
   --environment laboratory \
   --cluster crc-lab \
   --output-dir evidencias \
   --timeout 60
+```
+
+Guarde o diretório gerado em uma variável para os próximos passos:
+
+```bash
+LATEST="$(ls -dt evidencias/crc-lab/* | head -1)"
+echo "$LATEST"
 ```
 
 Saída esperada:
@@ -172,9 +185,27 @@ O diretório contém:
 - `manifest.json`;
 - `checksums.sha256`.
 
+### 7.2 Validar integridade da coleta
+
+```bash
+(cd "$LATEST" && sha256sum -c checksums.sha256)
+```
+
+Se algum checksum falhar, descarte a coleta e execute novamente.
+
+### 7.3 Gerar relatório da coleta
+
+```bash
+scripts/gerar-relatorio.sh \
+  --path "$LATEST" \
+  --output relatorios/relatorio-diagnostico.md
+```
+
+O relatório é um ponto de partida para análise. Ele referencia os artefatos coletados, mas não substitui a leitura dos arquivos de evidência quando houver incidente.
+
 ## 8. Diagnósticos direcionados
 
-Use estes comandos depois da coleta geral, quando você já sabe qual recurso precisa de drilldown.
+Use estes comandos somente depois da coleta completa segura, quando você já sabe qual recurso precisa de drilldown.
 
 Eles coletam mais detalhes de um alvo específico, como `describe`, eventos relacionados e logs limitados quando aplicável.
 
@@ -220,9 +251,18 @@ scripts/diagnosticar-pod.sh <namespace> <pod> \
   --tail 100
 ```
 
+Não use os comandos `diagnosticar-*` como substitutos da coleta completa. Eles são ferramentas de aprofundamento em um alvo conhecido.
+
+Exemplos de quando usar:
+
+- ClusterOperator `authentication` está `Degraded`;
+- node `crc` está com pressão de memória, disco ou PID;
+- namespace específico tem eventos `Warning`;
+- pod específico está em `CrashLoopBackOff`, `ImagePullBackOff` ou reiniciando muito.
+
 Não existe um `diagnosticar tudo profundamente` por padrão. Para uma coleta realmente exaustiva, use o fluxo controlado de must-gather descrito mais abaixo.
 
-Domínios prontos:
+Domínios prontos para aprofundamento opcional:
 
 ```bash
 scripts/diagnosticar-storage.sh --environment laboratory --cluster crc-lab
@@ -234,7 +274,13 @@ scripts/diagnosticar-monitoring.sh --environment laboratory --cluster crc-lab
 scripts/verificar-capacidade.sh --environment laboratory --cluster crc-lab
 ```
 
+Rode esses comandos quando a coleta completa segura indicar suspeita naquele domínio ou quando você quiser complementar a análise com um recorte específico.
+
 ## 9. Gerar relatório base
+
+Se você seguiu a seção 7, o relatório já foi gerado usando a variável `LATEST`.
+
+Para gerar novamente manualmente:
 
 ```bash
 scripts/gerar-relatorio.sh \
@@ -472,11 +518,12 @@ export OPENSHIFT_AIOPS_CLUSTER=crc-lab
 make check
 make check-cluster
 scripts/coletar-cluster.sh --environment laboratory --cluster crc-lab
-scripts/gerar-relatorio.sh --path evidencias/crc-lab/<timestamp>
+LATEST="$(ls -dt evidencias/crc-lab/* | head -1)"
+(cd "$LATEST" && sha256sum -c checksums.sha256)
+scripts/gerar-relatorio.sh --path "$LATEST" --output relatorios/relatorio-diagnostico.md
 scripts/configurar-codex-mcp.sh --yes --replace
 make must-gather-preflight ENVIRONMENT=laboratory CLUSTER=crc-lab
 make must-gather ENVIRONMENT=laboratory CLUSTER=crc-lab
-make analyze-must-gather RESOURCE=evidencias/crc-lab/<timestamp>/must-gather
+MUST_GATHER="$(ls -dt evidencias/crc-lab/*/must-gather | head -1)"
+make analyze-must-gather RESOURCE="$MUST_GATHER"
 ```
-
-Substitua `<timestamp>` pelo diretório gerado.
