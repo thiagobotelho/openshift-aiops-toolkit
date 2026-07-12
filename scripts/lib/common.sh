@@ -25,10 +25,10 @@ Uso:
   script [argumentos] [opções]
 
 Opções comuns:
-  --cluster <nome>          OBSOLETO: alias opcional para compatibilidade.
+  --cluster <nome>          Opcional: alias/metadado para inventário.
   --context <contexto>      Contexto kubeconfig explícito.
   --kubeconfig <arquivo>    Caminho do kubeconfig.
-  --environment <ambiente>  OBSOLETO: metadado opcional; padrão é current.
+  --environment <ambiente>  Opcional: metadado para inventário/auditoria.
   --output-dir <diretório>  Diretório de evidências.
   --timeout <segundos>      Timeout por comando.
   --tail <linhas>           Linhas de log para diagnóstico de Pod.

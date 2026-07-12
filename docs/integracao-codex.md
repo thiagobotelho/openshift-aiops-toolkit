@@ -13,7 +13,7 @@
 
 ## Script de configuração
 
-O script `scripts/configurar-codex-mcp.sh` foi ajustado para:
+O script `scripts/configurar-codex-mcp.sh`:
 
 - localizar o caminho absoluto do projeto;
 - usar `.venv/bin/python`;
@@ -26,9 +26,9 @@ O script `scripts/configurar-codex-mcp.sh` foi ajustado para:
 - registrar `OPENSHIFT_AIOPS_COMMAND_PREFIX` e `OPENSHIFT_AIOPS_OC_BIN` quando definidos;
 - não sobrescrever servidor já existente.
 
-## Configuração aplicada
+## Configuração esperada
 
-O servidor global `openshift-readonly` foi configurado no Codex CLI com:
+O servidor global `openshift-readonly` usa:
 
 - comando: `.venv/bin/python -m mcp_server.server`;
 - env: `PYTHONPATH`, `OPENSHIFT_AIOPS_COMMAND_PREFIX`, `OPENSHIFT_AIOPS_OC_BIN`;
@@ -46,6 +46,6 @@ tool_timeout_sec = 120
 enabled = true
 ```
 
-## Próximo passo
+## Uso
 
-Reiniciar a sessão Codex para carregar a nova ferramenta MCP e continuar com `prompts/continuar-validacao-mcp.md`. Não abrir uma segunda sessão Codex dentro da sessão atual.
+Após configurar o MCP, abra uma nova sessão Codex na raiz do repositório para carregar a ferramenta `openshift-readonly`. Use `prompts/continuar-validacao-mcp.md` quando quiser conduzir uma validação guiada.

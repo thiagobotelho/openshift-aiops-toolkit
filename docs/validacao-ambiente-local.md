@@ -18,7 +18,7 @@
 | `codex --help` | PASSOU | Codex CLI disponível |
 | `codex mcp --help` | PASSOU | subcomando MCP disponível |
 | `codex mcp list` | PASSOU | estado inicial conferido antes da configuração |
-| `make help` | PASSOU | Makefile corrigido |
+| `make help` | PASSOU | Makefile disponível |
 | `scripts/install.sh` | PASSOU | criou `.venv` e instalou dependências Python |
 | `make check` | PASSOU | preflight offline sem cluster |
 | `tests/run.sh` | PASSOU | 32 testes |

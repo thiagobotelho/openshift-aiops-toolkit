@@ -203,11 +203,11 @@ def warn_deprecated_parameters(argv: Sequence[str] | None, args: argparse.Namesp
     raw = list(argv) if argv is not None else sys.argv[1:]
     messages: list[str] = []
     if '--environment' in raw or os.environ.get('OPENSHIFT_AIOPS_ENVIRONMENT') not in {None, '', DEFAULT_ENVIRONMENT}:
-        messages.append('AVISO: --environment/OPENSHIFT_AIOPS_ENVIRONMENT está obsoleto para diagnósticos comuns; o contexto atual do oc é usado por padrão.')
+        messages.append('AVISO: --environment/OPENSHIFT_AIOPS_ENVIRONMENT é opcional; o contexto atual do oc é usado para diagnósticos comuns.')
     if '--cluster' in raw or os.environ.get('OPENSHIFT_AIOPS_CLUSTER'):
-        messages.append('AVISO: --cluster/OPENSHIFT_AIOPS_CLUSTER agora é metadado/alias opcional; a identidade principal vem da API e do contexto atual.')
+        messages.append('AVISO: --cluster/OPENSHIFT_AIOPS_CLUSTER é tratado como alias/metadado; a identidade principal vem da API e do contexto atual.')
     if '--confirm-production' in raw or os.environ.get('OPENSHIFT_AIOPS_PRODUCTION_CONFIRM'):
-        messages.append('AVISO: --confirm-production está obsoleto para consultas read-only; must-gather possui confirmação própria.')
+        messages.append('AVISO: --confirm-production não é necessário em consultas read-only; must-gather usa confirmação própria.')
     if args.action in {'must-gather', 'must-gather-preflight'}:
         return
     if getattr(args, 'json', False):

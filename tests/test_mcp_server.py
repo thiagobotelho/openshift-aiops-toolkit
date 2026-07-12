@@ -49,8 +49,8 @@ class McpServerProtocolTests(unittest.TestCase):
         self.assertIn("kubeconfig", schema["properties"])
         self.assertIn("output", schema["properties"])
         self.assertIn("timeout", schema["properties"])
-        self.assertTrue(schema["properties"]["environment"].get("deprecated"))
-        self.assertTrue(schema["properties"]["cluster"].get("deprecated"))
+        self.assertIn("metadado opcional", schema["properties"]["environment"].get("description", ""))
+        self.assertIn("alias opcional", schema["properties"]["cluster"].get("description", ""))
         self.assertFalse(schema["additionalProperties"])
 
     def test_no_generic_shell_tool_is_published(self):

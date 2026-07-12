@@ -18,7 +18,7 @@
 | listagem de ferramentas | PASSOU | 82 ferramentas |
 | schemas específicos por ferramenta | PASSOU | `inputSchema` preservado, sem wrapper genérico `arguments` |
 | parâmetros comuns read-only | PASSOU | `context`, `kubeconfig`, `timeout`, `output` e `verbose` publicados nos schemas |
-| compatibilidade de parâmetros antigos | PASSOU | `environment`, `cluster` e `confirm_production` aceitos como obsoletos, sem bloquear consultas read-only |
+| parâmetros opcionais de compatibilidade | PASSOU | `environment`, `cluster` e `confirm_production` aceitos como metadados opcionais, sem bloquear consultas read-only |
 | chamadas sequenciais STDIO | PASSOU | múltiplas ferramentas chamadas no mesmo processo, aguardando resposta por chamada |
 | E2E STDIO no CRC | PASSOU | 28 ferramentas consultivas, 28 aprovadas |
 | ausência de ferramenta genérica de shell | PASSOU | testes unitários |

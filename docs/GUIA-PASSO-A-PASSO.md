@@ -81,7 +81,7 @@ Edite apenas valores locais. Não coloque tokens, senhas ou kubeconfig completo 
 
 No modo simples, nenhuma variável é obrigatória. O toolkit usa o contexto atual do `oc` e detecta um nome lógico para salvar as evidências.
 
-Parâmetros como `OPENSHIFT_AIOPS_ENVIRONMENT` e `OPENSHIFT_AIOPS_CLUSTER` existem apenas como metadados opcionais/compatibilidade. Eles não são pré-requisito para diagnosticar o cluster atual.
+Parâmetros como `OPENSHIFT_AIOPS_ENVIRONMENT` e `OPENSHIFT_AIOPS_CLUSTER` são metadados opcionais para inventário, auditoria ou automações corporativas. Eles não são pré-requisito para diagnosticar o cluster atual.
 
 Se precisar consultar outro contexto sem alterar o kubeconfig persistente, prefira:
 
@@ -338,7 +338,7 @@ Ela valida:
 - inicialização do servidor MCP;
 - `tools/list`;
 - schemas específicos;
-- compatibilidade dos parâmetros antigos sem exigir ambiente;
+- parâmetros opcionais de compatibilidade sem exigir ambiente;
 - proteção específica de must-gather;
 - ausência de ferramenta genérica de shell.
 

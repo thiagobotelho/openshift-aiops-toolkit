@@ -16,14 +16,14 @@ Este documento descreve a validação consultiva do toolkit em CRC/OpenShift Loc
 
 Ressalvas principais:
 
-- na sessão Codex, `oc` não estava no `PATH`; foi usado `OPENSHIFT_AIOPS_OC_BIN`;
+- quando `oc` não está no `PATH` da sessão, use `OPENSHIFT_AIOPS_OC_BIN`;
 - `scripts/resumo-saude.sh` cria coleta consultiva local em `evidencias/`;
 - `health` ainda não transforma `Upgradeable=False` em alerta;
 - RBAC limitado não foi exercitado porque o usuário atual é `kubeadmin`.
 
 ## Must-gather validado
 
-O fluxo de must-gather foi validado em 2026-07-12 com confirmação explícita `crc-tg922`.
+O fluxo de must-gather usa confirmação explícita pelo identificador do cluster. Na validação CRC de 2026-07-12, o identificador usado foi `crc-tg922`.
 
 Resumo:
 

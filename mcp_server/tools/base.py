@@ -27,9 +27,9 @@ COMMON_PROPERTIES={
     "timeout":{"type":"integer","minimum":1,"maximum":900,"description":"timeout da consulta em segundos"},
     "output":{"type":"string","enum":["human","json","yaml","markdown","raw"],"description":"formato lógico preferido para a resposta"},
     "verbose":{"type":"boolean","description":"inclui detalhes adicionais quando a ferramenta suportar"},
-    "environment":{"type":"string","enum":["current","development","homologation","production","laboratory"],"description":"OBSOLETO: metadado opcional; o toolkit usa o contexto atual do oc","deprecated":True},
-    "cluster":{"type":"string","description":"OBSOLETO: alias opcional; o toolkit identifica o cluster pelo contexto/API atual","deprecated":True},
-    "confirm_production":{"type":"string","description":"OBSOLETO: não é exigido por ferramentas consultivas","deprecated":True},
+    "environment":{"type":"string","enum":["current","development","homologation","production","laboratory"],"description":"metadado opcional para inventário/auditoria; o toolkit usa o contexto atual do oc"},
+    "cluster":{"type":"string","description":"alias opcional para inventário; o toolkit identifica o cluster pelo contexto/API atual"},
+    "confirm_production":{"type":"string","description":"metadado opcional de compatibilidade; ferramentas consultivas não exigem confirmação de produção"},
 }
 def schema_with_common(properties: dict[str, Any] | None=None, required: list[str] | None=None) -> dict[str, Any]:
     merged={**COMMON_PROPERTIES, **(properties or {})}

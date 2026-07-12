@@ -54,8 +54,8 @@ Os achados de sensibilidade são esperados para must-gather e reforçam que `raw
 
 1. O diretório `evidencias/**` é ignorado pelo Git e deve permanecer local.
 2. A análise offline é conservadora e não substitui revisão humana antes de compartilhamento.
-3. A validação foi feita com `kubeadmin`; RBAC limitado não foi exercitado.
-4. `crc` não estava no `PATH` da sessão, mas isso não bloqueou o must-gather porque o `oc` foi apontado explicitamente via `OPENSHIFT_AIOPS_OC_BIN`.
+3. A validação usa `kubeadmin`; RBAC limitado não é exercitado nesse cenário.
+4. Quando `crc` não está no `PATH` da sessão, o `oc` pode ser apontado explicitamente via `OPENSHIFT_AIOPS_OC_BIN`.
 
 ## Conclusão
 

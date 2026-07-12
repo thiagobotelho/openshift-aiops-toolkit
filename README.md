@@ -112,14 +112,14 @@ Use somente quando precisar consultar outro contexto sem alterar o contexto pers
 ./openshift-aiops health --timeout 90
 ```
 
-Parâmetros antigos continuam aceitos temporariamente por compatibilidade, mas estão obsoletos:
+Parâmetros opcionais de compatibilidade para inventário, auditoria ou automações corporativas:
 
 - `--environment`;
 - `--cluster`;
 - `--confirm-production`;
 - variáveis `OPENSHIFT_AIOPS_ENVIRONMENT`, `OPENSHIFT_AIOPS_CLUSTER` e `OPENSHIFT_AIOPS_PRODUCTION_CONFIRM`.
 
-Eles não são mais pré-requisito para diagnósticos comuns. O cluster é identificado pelo contexto atual, API e objeto `Infrastructure`.
+Eles não são pré-requisitos para diagnósticos comuns. O cluster é identificado pelo contexto atual, API e objeto `Infrastructure`.
 
 ## Ambiente isolado ou Flatpak
 
@@ -214,7 +214,7 @@ O servidor `openshift-readonly` publica ferramentas específicas, sem terminal g
 - `output`;
 - `verbose`.
 
-`environment`, `cluster` e `confirm_production` continuam no schema apenas para compatibilidade e estão marcados como obsoletos.
+`environment`, `cluster` e `confirm_production` ficam disponíveis como metadados opcionais de compatibilidade para automações existentes.
 
 ## Validação local
 
@@ -235,7 +235,7 @@ make check-cluster
 
 ## Documentação
 
-- [Guia de migração para contexto automático](docs/migracao-contexto-automatico.md);
+- [Guia de operação com contexto atual](docs/contexto-atual.md);
 - [Guia passo a passo](docs/GUIA-PASSO-A-PASSO.md);
 - [Processo operacional](docs/PROCESSO-OPERACIONAL.md);
 - [MCP](docs/07-mcp.md);
