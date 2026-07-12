@@ -4,9 +4,16 @@ from typing import Any
 from .sanitizers import sanitize_obj, sanitize_text
 from .tools import call_tool, list_tools
 try:
-    from mcp.server.fastmcp import FastMCP
+    import anyio
+    from mcp.server import Server
+    from mcp.server.stdio import stdio_server
+    from mcp.types import TextContent, Tool
 except Exception:
-    FastMCP = None
+    anyio = None
+    Server = None
+    stdio_server = None
+    TextContent = None
+    Tool = None
 SERVER_NAME='openshift-readonly'
 def _jsonrpc_response(request_id: Any, result: Any = None, error: Any = None) -> dict[str, Any]:
     payload={'jsonrpc':'2.0','id':request_id}
@@ -33,7 +40,34 @@ def _fallback_stdio() -> None:
         except Exception as exc:
             resp=_jsonrpc_response(None, error={'code':-32000,'message':sanitize_text(str(exc))})
         print(json.dumps(resp, ensure_ascii=False), flush=True)
+async def _run_sdk_server() -> None:
+    server = Server(SERVER_NAME, version='0.1.0')
+
+    @server.list_tools()
+    async def handle_list_tools():
+        return [
+            Tool(
+                name=tool['name'],
+                description=tool['description'],
+                inputSchema=tool['inputSchema'],
+            )
+            for tool in list_tools()
+        ]
+
+    @server.call_tool(validate_input=True)
+    async def handle_call_tool(name: str, arguments: dict[str, Any] | None = None):
+        result = call_tool(name, arguments or {})
+        return [TextContent(type='text', text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(read_stream, write_stream, server.create_initialization_options())
+
+def _run_sdk() -> None:
+    anyio.run(_run_sdk_server)
+
 def _run_fastmcp() -> None:
+    """Deprecated compatibility path kept out of the default flow."""
+    from mcp.server.fastmcp import FastMCP
     mcp=FastMCP(SERVER_NAME)
     for tool in list_tools():
         name=tool['name']; description=tool['description']
@@ -45,8 +79,8 @@ def _run_fastmcp() -> None:
         mcp.tool(name=name, description=description)(_make_handler(name, description))
     mcp.run(transport='stdio')
 def main() -> int:
-    if FastMCP is not None:
-        _run_fastmcp()
+    if Server is not None and stdio_server is not None and anyio is not None:
+        _run_sdk()
     else:
         _fallback_stdio()
     return 0

@@ -10,7 +10,7 @@ from .sanitizers import sanitize_text
 from .validators import validate_k8s_name, validate_namespace, validate_tail, validate_workload_kind
 
 def _timestamp() -> str:
-    return datetime.now().strftime('%Y%m%d-%H%M%S')
+    return datetime.now().strftime('%Y%m%d-%H%M%S-%f')
 
 def _hash(path: Path) -> str:
     h = hashlib.sha256()
@@ -113,6 +113,70 @@ def collect_target_evidence(*, target: str, namespace: str | None = None, name: 
             ('workloads','workload',['get',wk,nm,'-n',ns,'-o','yaml']),
             ('workloads','workload-describe',['describe',wk,nm,'-n',ns]),
             ('events','workload-events',['get','events','-n',ns,'--sort-by=.lastTimestamp']),
+        ]
+    elif target == 'storage':
+        commands += [
+            ('storage','storageclasses',['get','storageclass','-o','wide']),
+            ('storage','pvs',['get','pv','-o','wide']),
+            ('storage','pvcs',['get','pvc','-A','-o','wide']),
+            ('storage','volumeattachments',['get','volumeattachments','-o','wide']),
+            ('storage','csidrivers',['get','csidrivers','-o','wide']),
+            ('storage','csinodes',['get','csinodes','-o','wide']),
+        ]
+    elif target == 'network':
+        commands += [
+            ('network','network-config',['get','network.config.openshift.io','cluster','-o','yaml']),
+            ('network','network-operator',['get','clusteroperator','network','-o','yaml']),
+            ('network','network-pods',['get','pods','-n','openshift-network-operator','-o','wide']),
+            ('network','networkpolicies',['get','networkpolicies','-A','-o','wide']),
+            ('network','services',['get','services','-A','-o','wide']),
+            ('network','endpoints',['get','endpoints','-A','-o','wide']),
+            ('network','endpointslices',['get','endpointslices','-A','-o','wide']),
+            ('network','routes',['get','routes','-A','-o','wide']),
+        ]
+    elif target == 'ingress':
+        commands += [
+            ('network','ingress-operator',['get','clusteroperator','ingress','-o','yaml']),
+            ('network','ingresscontrollers',['get','ingresscontrollers','-A','-o','wide']),
+            ('network','ingress-pods',['get','pods','-n','openshift-ingress','-o','wide']),
+            ('network','routes',['get','routes','-A','-o','wide']),
+            ('events','ingress-events',['get','events','-n','openshift-ingress','--sort-by=.lastTimestamp']),
+        ]
+    elif target == 'dns':
+        commands += [
+            ('network','dns-operator',['get','clusteroperator','dns','-o','yaml']),
+            ('network','dns-config',['get','dns.operator.openshift.io','default','-o','yaml']),
+            ('network','dns-pods',['get','pods','-n','openshift-dns','-o','wide']),
+            ('network','dns-services',['get','services','-n','openshift-dns','-o','wide']),
+            ('network','dns-endpoints',['get','endpoints','-n','openshift-dns','-o','wide']),
+            ('events','dns-events',['get','events','-n','openshift-dns','--sort-by=.lastTimestamp']),
+        ]
+    elif target == 'olm':
+        commands += [
+            ('operators','csvs',['get','clusterserviceversions','-A','-o','wide']),
+            ('operators','subscriptions',['get','subscriptions','-A','-o','wide']),
+            ('operators','installplans',['get','installplans','-A','-o','wide']),
+            ('operators','catalogsources',['get','catalogsources','-A','-o','wide']),
+            ('operators','operatorgroups',['get','operatorgroups','-A','-o','wide']),
+        ]
+    elif target == 'monitoring':
+        commands += [
+            ('monitoring','monitoring-operator',['get','clusteroperator','monitoring','-o','yaml']),
+            ('monitoring','monitoring-pods',['get','pods','-n','openshift-monitoring','-o','wide']),
+            ('monitoring','monitoring-pvcs',['get','pvc','-n','openshift-monitoring','-o','wide']),
+            ('monitoring','prometheusrules',['get','prometheusrules','-A','-o','wide']),
+            ('events','monitoring-events',['get','events','-n','openshift-monitoring','--sort-by=.lastTimestamp']),
+        ]
+    elif target in {'capacidade', 'capacity'}:
+        commands += [
+            ('nodes','nodes',['get','nodes','-o','json']),
+            ('nodes','top-nodes',['adm','top','nodes']),
+            ('workloads','top-pods',['adm','top','pods','-A']),
+        ]
+    elif target in {'certificados', 'csr'}:
+        commands += [
+            ('cluster','csrs',['get','csr','-o','wide']),
+            ('events','certificate-events',['get','events','-A','--field-selector=type=Warning','--sort-by=.lastTimestamp']),
         ]
     else:
         commands += [

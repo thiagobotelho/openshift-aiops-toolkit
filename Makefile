@@ -22,14 +22,16 @@ endif
 ifneq ($(KUBECONFIG),)
 COMMON_ARGS += --kubeconfig $(KUBECONFIG)
 endif
-.PHONY: help install uninstall check list-clusters context health collect cluster pod workload namespace operator node storage network ingress dns api etcd auth monitoring certificates olm upgrade must-gather inspect report sanitize bundle compare mcp test lint clean
+.PHONY: help install uninstall check check-cluster list-clusters context health collect cluster pod workload namespace operator node storage network ingress dns api etcd auth monitoring certificates olm upgrade must-gather-preflight must-gather analyze-must-gather inspect report sanitize bundle compare mcp test lint clean
 help: ## Mostra ajuda
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "%-22s %s\n", $$1, $$2}'
 install: ## Instala ambiente local
 	@scripts/install.sh
 uninstall: ## Remove ambiente virtual local
 	@scripts/uninstall.sh
-check: ## Executa preflight somente leitura
+check: ## Executa preflight local/offline sem acessar cluster
+	@scripts/preflight.sh --offline $(COMMON_ARGS)
+check-cluster: ## Executa preflight consultivo contra o cluster atual
 	@scripts/preflight.sh $(COMMON_ARGS)
 list-clusters: ## Lista clusters do inventário
 	@scripts/listar-clusters.sh
@@ -76,8 +78,14 @@ olm: ## Diagnóstico de OLM
 	@scripts/diagnosticar-olm.sh $(COMMON_ARGS)
 upgrade: ## Verifica status de upgrade
 	@scripts/verificar-upgrade.sh $(COMMON_ARGS)
+must-gather-preflight: ## Preflight consultivo de must-gather
+	@scripts/preflight.sh $(COMMON_ARGS) >/dev/null
+	@python3 -m mcp_server.commands must-gather-preflight $(COMMON_ARGS)
 must-gather: ## Coleta must-gather com confirmação humana
 	@scripts/coletar-must-gather.sh $(COMMON_ARGS)
+analyze-must-gather: ## Analisa must-gather offline: make analyze-must-gather RESOURCE=evidencias/.../must-gather
+	@test -n "$(RESOURCE)"
+	@python3 -m mcp_server.commands analyze-must-gather --path $(RESOURCE)
 inspect: ## Coleta inspect seletivo
 	@test -n "$(RESOURCE)"
 	@scripts/coletar-inspect.sh $(RESOURCE) $(COMMON_ARGS)
@@ -97,12 +105,4 @@ mcp: ## Inicia servidor MCP stdio
 test lint: ## Executa testes e validações estáticas
 	@tests/run.sh
 clean: ## Remove caches locais do projeto
-	@python3 - <<'PYCLEAN'
-from pathlib import Path
-import shutil
-for pattern in ['.pytest_cache', '.mypy_cache', '.ruff_cache']:
-    p=Path(pattern)
-    if p.exists(): shutil.rmtree(p)
-for p in Path('.').rglob('__pycache__'):
-    shutil.rmtree(p)
-PYCLEAN
+	@python3 -c "from pathlib import Path; import shutil; [shutil.rmtree(p) for p in [Path('.pytest_cache'), Path('.mypy_cache'), Path('.ruff_cache')] if p.exists()]; [shutil.rmtree(p) for p in Path('.').rglob('__pycache__')]"

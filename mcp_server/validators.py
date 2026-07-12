@@ -47,8 +47,10 @@ def validate_local_path(value: str, base_dir: str | Path | None = None) -> Path:
     ensure_no_dangerous(value, "path")
     raw = Path(os.path.expanduser(value))
     if ".." in raw.parts: raise ValidationError("path traversal não permitido")
-    resolved = raw.resolve()
     if base_dir is not None:
         base = Path(base_dir).resolve()
+        resolved = raw.resolve() if raw.is_absolute() else (base / raw).resolve()
         if base not in [resolved, *resolved.parents]: raise ValidationError("path fora do diretório permitido")
+        return resolved
+    resolved = raw.resolve()
     return resolved

@@ -52,14 +52,26 @@ cp inventories/clusters.example.yaml inventories/clusters.yaml
 
 Nunca armazene tokens no inventário. Use kubeconfig já autenticado com permissão somente leitura.
 
+Quando o toolkit roda dentro de um ambiente isolado, como VS Code/Flatpak, mas o `oc` está no host, configure:
+
+```bash
+export OPENSHIFT_AIOPS_COMMAND_PREFIX="flatpak-spawn --host"
+export OPENSHIFT_AIOPS_OC_BIN="$HOME/.crc/cache/crc_libvirt_4.22.1_amd64/oc"
+```
+
+O prefixo aceito é restrito por allowlist; não há shell arbitrário.
+
 ## Uso em cluster único
 
 ```bash
+scripts/preflight.sh --offline
 scripts/preflight.sh --environment development
 scripts/validar-contexto.sh
 scripts/coletar-cluster.sh --cluster cluster-dev --environment development
 scripts/gerar-relatorio.sh --path evidencias/cluster-dev/<coleta>
 ```
+
+`scripts/preflight.sh --offline` e `make check` não acessam a API OpenShift. Use `make check-cluster` apenas depois de confirmar que o contexto atual é o cluster esperado.
 
 ## Uso em múltiplos clusters
 
@@ -82,6 +94,15 @@ codex mcp list
 ```
 
 Configuração manual: `.codex/config.toml.example`.
+
+O script de configuração do MCP mostra o comando e pede confirmação antes de alterar a configuração do Codex. Use `scripts/configurar-codex-mcp.sh --yes` somente em automação consciente.
+
+As ferramentas MCP aceitam parâmetros comuns opcionais para auditoria e segurança:
+
+- `environment`: `development`, `homologation`, `laboratory` ou `production`;
+- `cluster`: nome lógico do cluster;
+- `timeout`: limite da consulta em segundos;
+- `confirm_production`: obrigatório quando `environment=production`.
 
 ## Scripts principais
 
@@ -107,7 +128,17 @@ Não coleta conteúdo de Secrets, não altera recursos, bloqueia verbos de escri
 
 ## Must-gather
 
-`coletar-must-gather.sh` exige confirmação humana, pode gerar pacote grande e potencialmente sensível, calcula SHA256 e não faz upload.
+`coletar-must-gather.sh` executa uma coleta controlada para laboratório/produção autorizada. A coleta pode gerar pacote grande e sensível, usa `umask 077`, grava em `evidencias/<cluster>/<timestamp>/must-gather/`, preserva `raw/`, gera manifesto, SHA256, marcador `DO-NOT-COMMIT.txt` e não faz upload.
+
+Fluxo recomendado:
+
+```bash
+make must-gather-preflight ENVIRONMENT=laboratory CLUSTER=crc-lab
+make must-gather ENVIRONMENT=laboratory CLUSTER=crc-lab
+make analyze-must-gather RESOURCE=evidencias/<cluster>/<timestamp>/must-gather
+```
+
+O diretório bruto é classificado como confidencial e não deve ser publicado.
 
 ## Limitações
 
@@ -116,10 +147,21 @@ Permissões insuficientes reduzem evidências. Métricas dependem da API de mét
 ## Troubleshooting
 
 ```bash
-scripts/preflight.sh --verbose
+scripts/preflight.sh --offline --verbose
 python3 -m compileall mcp_server
 tests/run.sh
 ```
+
+Documentos de validação:
+
+- `docs/auditoria-estatica.md`;
+- `docs/validacao-ambiente-local.md`;
+- `docs/validacao-mcp.md`;
+- `docs/validacao-crc.md`;
+- `docs/matriz-testes.md`;
+- `docs/matriz-compatibilidade.md`.
+- `docs/matriz-mcp-scripts-must-gather.md`;
+- `docs/comparacao-mcp-redhat.md`.
 
 ## Roadmap
 
@@ -130,4 +172,3 @@ Mais correlações, perfis de coleta por domínio e exportadores de relatório.
 - Red Hat OpenShift Documentation: https://docs.redhat.com/en/documentation/openshift_container_platform
 - OpenShift CLI: https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/cli_tools/openshift-cli-oc
 - Model Context Protocol: https://modelcontextprotocol.io/
-```

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Any
-from .base import ToolSpec
+from .base import ToolSpec, extend_schema_with_common, validate_common_params
 MODULES=['cluster','nodes','pods','workloads','namespaces','operators','storage','network','ingress','dns','authentication','monitoring','certificates','evidence','reports']
 def get_tool_registry() -> dict[str, ToolSpec]:
     registry={}
@@ -16,9 +16,11 @@ def get_tool_registry() -> dict[str, ToolSpec]:
     registry.setdefault('endpoints_health', oc_simple('endpoints_health','Endpoints e EndpointSlices.',['get','endpoints,endpointslices','-A','-o','wide']))
     return registry
 def list_tools() -> list[dict[str, Any]]:
-    return sorted([{'name': s.name, 'description': s.description, 'inputSchema': s.input_schema} for s in get_tool_registry().values()], key=lambda x: x['name'])
+    return sorted([{'name': s.name, 'description': s.description, 'inputSchema': extend_schema_with_common(s.input_schema)} for s in get_tool_registry().values()], key=lambda x: x['name'])
 def call_tool(name: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
     registry=get_tool_registry()
     if name not in registry:
         raise KeyError(f'ferramenta MCP desconhecida: {name}')
-    return registry[name].handler(arguments or {})
+    params=arguments or {}
+    validate_common_params(params)
+    return registry[name].handler(params)

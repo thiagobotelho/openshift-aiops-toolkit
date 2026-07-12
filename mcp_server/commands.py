@@ -1,11 +1,17 @@
 from __future__ import annotations
-import argparse, hashlib, json, os, shutil, subprocess, sys, tarfile, time
+import argparse, hashlib, json, os, shlex, shutil, subprocess, sys, tarfile, time
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 from . import config
 from .models import CommandResult
 from .sanitizers import sanitize_text
-from .validators import ValidationError, validate_context, validate_environment, validate_timeout
+from .validators import (
+    ValidationError,
+    validate_context,
+    validate_environment,
+    validate_local_path,
+    validate_timeout,
+)
 
 MUTATING_OC_VERBS={"delete","apply","create","patch","edit","replace","scale","expose","set","annotate","label","exec","rsh","debug","attach","cp","rsync","port-forward"}
 MUTATING_OC_ADM_VERBS={"drain","cordon","uncordon","taint","policy","groups","certificate"}
@@ -16,6 +22,36 @@ GLOBAL_FLAGS_WITH_VALUE={"--context","--kubeconfig","--namespace","-n","-o","--o
 GLOBAL_FLAGS_NO_VALUE={"-A","--all-namespaces","--show-server","--previous"}
 class CommandBlocked(RuntimeError): pass
 
+ALLOWED_COMMAND_PREFIXES = {(), ('flatpak-spawn', '--host')}
+
+def command_prefix() -> list[str]:
+    raw = os.environ.get('OPENSHIFT_AIOPS_COMMAND_PREFIX', '').strip()
+    if not raw:
+        return []
+    parts = shlex.split(raw)
+    if tuple(parts) not in ALLOWED_COMMAND_PREFIXES:
+        raise CommandBlocked('prefixo de comando não autorizado')
+    return parts
+
+def oc_binary() -> str:
+    return os.environ.get('OPENSHIFT_AIOPS_OC_BIN', 'oc')
+
+def oc_available() -> bool:
+    binary = oc_binary()
+    if os.path.sep not in binary and shutil.which(binary) is None and not command_prefix():
+        return False
+    try:
+        completed = subprocess.run(
+            command_prefix() + [binary, 'version', '--client'],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        return completed.returncode == 0
+    except Exception:
+        return False
+
 def require_production_confirmation(args: argparse.Namespace) -> None:
     if args.environment != 'production':
         return
@@ -24,7 +60,7 @@ def require_production_confirmation(args: argparse.Namespace) -> None:
     if provided == expected:
         return
     identity = {}
-    if shutil.which('oc'):
+    if not getattr(args, 'offline', False) and oc_available():
         for name, oc_args in {
             'context': ['config', 'current-context'],
             'user': ['whoami'],
@@ -66,7 +102,8 @@ def validate_oc_args(args: Sequence[str]) -> None:
     if verb not in READONLY_OC_VERBS or verb in MUTATING_OC_VERBS: raise CommandBlocked(f'verbo oc bloqueado: {verb}')
     if verb in {'get','describe'}:
         pos=list(args).index(verb); resource=args[pos+1].lower() if len(args)>pos+1 else ''
-        if resource in SECRET_RESOURCES: raise CommandBlocked('conteúdo de Secrets não é coletado')
+        resource_names = {item.split('/')[0] for item in resource.split(',') if item}
+        if resource_names & SECRET_RESOURCES: raise CommandBlocked('conteúdo de Secrets não é coletado')
     if verb == 'adm':
         pos=list(args).index('adm'); adm=args[pos+1] if len(args)>pos+1 else ''
         if adm in MUTATING_OC_ADM_VERBS or adm not in READONLY_OC_ADM_VERBS: raise CommandBlocked(f'oc adm {adm} não autorizado')
@@ -78,7 +115,7 @@ def validate_oc_args(args: Sequence[str]) -> None:
         if sub != 'current-context': raise CommandBlocked('somente oc config current-context é permitido')
 
 def build_oc_command(args: Sequence[str], *, context: str | None=None, kubeconfig: str | None=None, namespace: str | None=None) -> list[str]:
-    validate_oc_args(args); cmd=['oc']
+    validate_oc_args(args); cmd=command_prefix() + [oc_binary()]
     if context: cmd += ['--context', validate_context(context)]
     if kubeconfig: cmd += ['--kubeconfig', os.path.expanduser(kubeconfig)]
     if namespace: cmd += ['-n', namespace]
@@ -104,9 +141,39 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 def require_tools(names: Iterable[str]) -> dict[str,bool]: return {n: shutil.which(n) is not None for n in names}
 
+def required_tools_status(names: Iterable[str]) -> dict[str, bool]:
+    status = require_tools([name for name in names if name != 'oc'])
+    if 'oc' in names:
+        status['oc'] = oc_available()
+    return status
+
+def resolve_project_path(value: str | Path, *, must_exist: bool = False) -> Path:
+    path = validate_local_path(str(value), config.project_root())
+    if must_exist and not path.exists():
+        raise ValidationError(f'path não encontrado: {path}')
+    return path
+
 def preflight(args):
-    payload={'required_tools': require_tools(['python3','oc','jq','tar','gzip','sha256sum']), 'optional_tools': require_tools(['yq','codex','podman','crc']), 'readonly': True}
-    if shutil.which('oc'):
+    offline = args.offline or os.environ.get('OPENSHIFT_AIOPS_OFFLINE', '').lower() in {'1', 'true', 'yes'}
+    required_names = ['python3', 'tar', 'gzip', 'sha256sum']
+    if not offline:
+        required_names.extend(['oc', 'jq'])
+    payload={
+        'mode': 'offline' if offline else 'cluster',
+        'required_tools': required_tools_status(required_names),
+        'optional_tools': require_tools(['jq', 'yq', 'codex', 'podman', 'crc']),
+        'readonly': True,
+        'venv_exists': (config.project_root() / '.venv').exists(),
+    }
+    try:
+        import mcp  # type: ignore[import-not-found]
+        payload['mcp_sdk'] = {'available': True, 'version': getattr(mcp, '__version__', 'unknown')}
+    except Exception as exc:
+        payload['mcp_sdk'] = {'available': False, 'error': type(exc).__name__}
+    if offline:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0 if all(payload['required_tools'].values()) else 2
+    if oc_available():
         for name, oc_args in {'current_context':['config','current-context'], 'whoami':['whoami'], 'server':['whoami','--show-server'], 'version':['version'], 'clusterversion':['get','clusterversion','-o','json'], 'infrastructure':['get','infrastructure','cluster','-o','json'], 'can_i_list':['auth','can-i','--list']}.items():
             payload[name]=run_oc(oc_args, timeout=args.timeout).to_dict()
     print(json.dumps(payload, ensure_ascii=False, indent=2)); return 0 if all(payload['required_tools'].values()) else 2
@@ -116,36 +183,61 @@ def show_context(args):
     r=run_oc(['config','current-context'], timeout=args.timeout); print(json.dumps(r.to_dict(), ensure_ascii=False, indent=2)); return r.exit_code
 
 def sanitize_file(args):
-    src=Path(args.path or args.name or '');
-    if not src.exists(): print(f'arquivo não encontrado: {src}', file=sys.stderr); return 2
-    dst=Path(args.output) if args.output else src.with_suffix(src.suffix+'.sanitized')
+    src=resolve_project_path(args.path or args.name or '', must_exist=True)
+    dst=resolve_project_path(args.output) if args.output else src.with_suffix(src.suffix+'.sanitized')
     dst.write_text(sanitize_text(src.read_text(encoding='utf-8', errors='replace')), encoding='utf-8'); print(str(dst)); return 0
 
 def package_evidence(args):
-    src=Path(args.path or args.name or '').resolve()
+    src=resolve_project_path(args.path or args.name or '', must_exist=True)
     if not src.exists() or not src.is_dir(): print('diretório de evidências inválido', file=sys.stderr); return 2
-    dst=Path(args.output) if args.output else src.with_suffix('.tar.gz')
+    dst=resolve_project_path(args.output) if args.output else src.with_suffix('.tar.gz')
     with tarfile.open(dst,'w:gz') as tar: tar.add(src, arcname=src.name)
     print(json.dumps({'package': str(dst), 'sha256': sha256_file(dst)}, ensure_ascii=False, indent=2)); return 0
 
 def generate_report(args):
     from .reports import generate_base_report
-    target=Path(args.output) if args.output else config.project_root()/'relatorios'/'relatorio-diagnostico.md'
-    target.parent.mkdir(parents=True, exist_ok=True); target.write_text(generate_base_report(Path(args.path) if args.path else None, args.title), encoding='utf-8'); print(str(target)); return 0
+    evidence = resolve_project_path(args.path, must_exist=True) if args.path else None
+    target=resolve_project_path(args.output) if args.output else config.project_root()/'relatorios'/'relatorio-diagnostico.md'
+    target.parent.mkdir(parents=True, exist_ok=True); target.write_text(generate_base_report(evidence, args.title), encoding='utf-8'); print(str(target)); return 0
 
 def collect_cluster(args):
     from .collectors import collect_cluster_evidence
-    out=collect_cluster_evidence(cluster=args.cluster or 'cluster-nao-informado', environment=args.environment, context=args.context, kubeconfig=args.kubeconfig, output_dir=Path(args.output_dir), timeout=args.timeout)
+    if args.dry_run or args.offline:
+        print(json.dumps({'dry_run': True, 'offline': args.offline, 'action': 'collect-cluster', 'cluster': args.cluster or 'cluster-nao-informado', 'environment': args.environment}, ensure_ascii=False, indent=2))
+        return 0 if args.dry_run else 2
+    out=collect_cluster_evidence(cluster=args.cluster or 'cluster-nao-informado', environment=args.environment, context=args.context, kubeconfig=args.kubeconfig, output_dir=resolve_project_path(args.output_dir), timeout=args.timeout)
     print(json.dumps({'evidence_dir': str(out)}, ensure_ascii=False, indent=2)); return 0
 
 def diagnose(args):
     from .collectors import collect_target_evidence
-    out=collect_target_evidence(target=args.target, namespace=args.namespace, name=args.name, kind=args.kind, output_dir=Path(args.output_dir), timeout=args.timeout, tail=args.tail, context=args.context, kubeconfig=args.kubeconfig)
+    if args.dry_run or args.offline:
+        print(json.dumps({'dry_run': True, 'offline': args.offline, 'action': 'diagnose', 'target': args.target, 'namespace': args.namespace, 'name': args.name}, ensure_ascii=False, indent=2))
+        return 0 if args.dry_run else 2
+    out=collect_target_evidence(target=args.target, namespace=args.namespace, name=args.name, kind=args.kind, output_dir=resolve_project_path(args.output_dir), timeout=args.timeout, tail=args.tail, context=args.context, kubeconfig=args.kubeconfig)
     print(json.dumps({'evidence_dir': str(out)}, ensure_ascii=False, indent=2)); return 0
 
 def compare(args):
     from .reports import compare_evidence_dirs
-    print(compare_evidence_dirs(Path(args.old), Path(args.new))); return 0
+    print(compare_evidence_dirs(resolve_project_path(args.old, must_exist=True), resolve_project_path(args.new, must_exist=True))); return 0
+
+def must_gather_preflight(args):
+    from .must_gather import collect_preflight
+    payload = collect_preflight(args.cluster, args.timeout, args.output_dir)
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0
+
+def must_gather_collect(args):
+    from .must_gather import execute_must_gather
+    out = execute_must_gather(cluster=args.cluster, output_dir=args.output_dir, timeout=args.timeout)
+    print(json.dumps({'must_gather_dir': str(out)}, ensure_ascii=False, indent=2))
+    return 0
+
+def must_gather_analyze(args):
+    from .must_gather import analyze_must_gather
+    target = resolve_project_path(args.path or args.name or '', must_exist=True)
+    report = analyze_must_gather(target)
+    print(str(report))
+    return 0
 
 def uninstall(args):
     v=config.project_root()/'.venv'
@@ -159,7 +251,7 @@ def build_parser():
     p.add_argument('--cluster', default=os.environ.get('OPENSHIFT_AIOPS_CLUSTER')); p.add_argument('--context', default=os.environ.get('OPENSHIFT_AIOPS_CONTEXT')); p.add_argument('--kubeconfig', default=os.environ.get('OPENSHIFT_AIOPS_KUBECONFIG'))
     p.add_argument('--environment', default=os.environ.get('OPENSHIFT_AIOPS_ENVIRONMENT','development')); p.add_argument('--output-dir', default=os.environ.get('OPENSHIFT_AIOPS_OUTPUT_DIR','evidencias'))
     p.add_argument('--timeout', default=int(os.environ.get('OPENSHIFT_AIOPS_TIMEOUT','60')), type=int); p.add_argument('--tail', default=int(os.environ.get('OPENSHIFT_AIOPS_LOG_TAIL','300')), type=int)
-    p.add_argument('--namespace','-n'); p.add_argument('--kind'); p.add_argument('--path'); p.add_argument('--output'); p.add_argument('--old'); p.add_argument('--new'); p.add_argument('--title', default='Relatório de Diagnóstico OpenShift'); p.add_argument('--dry-run', action='store_true'); p.add_argument('--verbose', action='store_true')
+    p.add_argument('--namespace','-n'); p.add_argument('--kind'); p.add_argument('--path'); p.add_argument('--output'); p.add_argument('--old'); p.add_argument('--new'); p.add_argument('--title', default='Relatório de Diagnóstico OpenShift'); p.add_argument('--dry-run', action='store_true'); p.add_argument('--offline', action='store_true'); p.add_argument('--verbose', action='store_true')
     p.add_argument('--confirm-production')
     return p
 
@@ -169,13 +261,14 @@ def main(argv: Sequence[str] | None=None) -> int:
     try:
         args.environment=validate_environment(args.environment)
         require_production_confirmation(args)
-        actions={'preflight':preflight,'list-clusters':list_clusters,'context':show_context,'validate-context':show_context,'collect-cluster':collect_cluster,'collect-diagnostic':collect_cluster,'report':generate_report,'sanitize':sanitize_file,'bundle':package_evidence,'compare':compare,'uninstall':uninstall}
+        actions={'preflight':preflight,'list-clusters':list_clusters,'context':show_context,'validate-context':show_context,'collect-cluster':collect_cluster,'collect-diagnostic':collect_cluster,'report':generate_report,'sanitize':sanitize_file,'bundle':package_evidence,'compare':compare,'uninstall':uninstall,'must-gather-preflight':must_gather_preflight,'must-gather':must_gather_collect,'analyze-must-gather':must_gather_analyze}
         if args.action == 'diagnose': args.target=args.name or 'cluster'; return diagnose(args)
         if args.action in actions: return actions[args.action](args)
         script=args.action.replace('.sh','')
         if script.startswith('diagnosticar-'):
             args.target=script.removeprefix('diagnosticar-'); pos=[x for x in [args.name,*args.extra] if x]
-            if args.target in {'pod','service','route'} and len(pos)>=2: args.namespace,args.name=pos[0],pos[1]
+            if args.target == 'must-gather': return must_gather_collect(args)
+            if args.target in {'pod','service','route','workload'} and len(pos)>=2: args.namespace,args.name=pos[0],pos[1]
             elif args.target in {'namespace','node','operator','alerta'} and pos: args.name=pos[0]
             return diagnose(args)
         if script.startswith('verificar-'):

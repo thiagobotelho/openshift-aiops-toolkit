@@ -3,6 +3,14 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TOOLKIT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 export PYTHONPATH="${TOOLKIT_ROOT}:${PYTHONPATH:-}"
+PYTHON_BIN="${OPENSHIFT_AIOPS_PYTHON:-}"
+if [ -z "${PYTHON_BIN}" ]; then
+  if [ -x "${TOOLKIT_ROOT}/.venv/bin/python" ]; then
+    PYTHON_BIN="${TOOLKIT_ROOT}/.venv/bin/python"
+  else
+    PYTHON_BIN="python3"
+  fi
+fi
 source "${SCRIPT_DIR}/logging.sh"
 source "${SCRIPT_DIR}/security.sh"
 source "${SCRIPT_DIR}/validators.sh"
@@ -35,5 +43,5 @@ run_python_action() {
   if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then usage_common; exit 0; fi
   cd "${TOOLKIT_ROOT}"
   log_info "Executando ação ${action} em modo somente leitura"
-  python3 -m mcp_server.commands "${action}" "$@"
+  "${PYTHON_BIN}" -m mcp_server.commands "${action}" "$@"
 }

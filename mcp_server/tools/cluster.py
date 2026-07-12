@@ -2,14 +2,14 @@ from __future__ import annotations
 from typing import Any
 from .. import cluster as cluster_mod, context as context_mod
 from ..commands import run_oc
-from .base import ToolSpec, name_schema, no_args_schema, oc_simple
+from .base import ToolSpec, common_timeout, name_schema, no_args_schema, oc_simple
 
 def _list(_: dict[str, Any]) -> dict[str, Any]: return {'clusters': context_mod.list_configured_clusters()}
-def _current(_: dict[str, Any]) -> dict[str, Any]: return context_mod.current_context()
+def _current(p: dict[str, Any]) -> dict[str, Any]: return context_mod.current_context(timeout=common_timeout(p))
 def _select(p: dict[str, Any]) -> dict[str, Any]: return context_mod.select_cluster_context(p['name'])
-def _validate(p: dict[str, Any]) -> dict[str, Any]: return context_mod.validate_cluster_context(p['name'])
-def _identity(_: dict[str, Any]) -> dict[str, Any]: return cluster_mod.identity()
-def _permissions(_: dict[str, Any]) -> dict[str, Any]: return run_oc(['auth','can-i','--list']).to_dict()
+def _validate(p: dict[str, Any]) -> dict[str, Any]: return context_mod.validate_cluster_context(p['name'], timeout=common_timeout(p))
+def _identity(p: dict[str, Any]) -> dict[str, Any]: return cluster_mod.identity(timeout=common_timeout(p))
+def _permissions(p: dict[str, Any]) -> dict[str, Any]: return run_oc(['auth','can-i','--list'], timeout=common_timeout(p)).to_dict()
 TOOLS={
 'list_configured_clusters': ToolSpec('list_configured_clusters','Lista clusters do inventário local.',_list,no_args_schema()),
 'current_context': ToolSpec('current_context','Retorna o contexto OpenShift atual.',_current,no_args_schema()),

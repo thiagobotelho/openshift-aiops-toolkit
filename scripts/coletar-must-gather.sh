@@ -2,4 +2,4 @@
 set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
-run_python_action "diagnosticar-must-gather.sh" "$@"
+run_python_action "must-gather" "$@"
