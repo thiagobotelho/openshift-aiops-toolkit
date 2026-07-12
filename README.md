@@ -154,6 +154,7 @@ tests/run.sh
 
 Documentos de validação:
 
+- `docs/GUIA-PASSO-A-PASSO.md`;
 - `docs/auditoria-estatica.md`;
 - `docs/validacao-ambiente-local.md`;
 - `docs/validacao-mcp.md`;

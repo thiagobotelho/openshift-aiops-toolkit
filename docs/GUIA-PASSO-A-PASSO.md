@@ -1,0 +1,455 @@
+# Guia passo a passo — OpenShift AIOps Toolkit
+
+Este guia mostra o fluxo completo para instalar, validar, operar, coletar evidências, usar MCP/Codex e executar must-gather controlado com o `openshift-aiops-toolkit`.
+
+O toolkit é assistivo e somente leitura por padrão. Ele não executa remediação automática e não deve ser usado para alterar recursos do cluster.
+
+## 1. Pré-requisitos
+
+Ferramentas obrigatórias:
+
+- Bash;
+- Python 3.10 ou superior;
+- `tar`;
+- `gzip`;
+- `sha256sum`.
+
+Ferramentas recomendadas:
+
+- `oc`;
+- `jq`;
+- Codex CLI;
+- CRC/OpenShift Local, quando o ambiente for laboratório local.
+
+Ferramentas opcionais:
+
+- `yq`;
+- Podman;
+- GitHub CLI.
+
+Valide o básico:
+
+```bash
+bash --version
+python3 --version
+python3 -m pip --version
+```
+
+## 2. Clonar o repositório
+
+```bash
+git clone https://github.com/<usuario-ou-org>/openshift-aiops-toolkit.git
+cd openshift-aiops-toolkit
+```
+
+Se você já possui o repositório local:
+
+```bash
+cd openshift-aiops-toolkit
+git status --short
+```
+
+## 3. Instalar dependências Python
+
+```bash
+scripts/install.sh
+```
+
+O script:
+
+- cria `.venv`;
+- instala dependências Python declaradas;
+- não usa `sudo`;
+- não instala pacotes do sistema;
+- não acessa o cluster.
+
+Ative o ambiente, se quiser executar comandos Python diretamente:
+
+```bash
+source .venv/bin/activate
+```
+
+## 4. Configurar variáveis locais
+
+Crie o `.env`:
+
+```bash
+cp .env.example .env
+```
+
+Edite apenas valores locais. Não coloque tokens, senhas ou kubeconfig completo no repositório.
+
+Exemplo para laboratório:
+
+```bash
+export OPENSHIFT_AIOPS_ENVIRONMENT=laboratory
+export OPENSHIFT_AIOPS_CLUSTER=crc-lab
+```
+
+Quando o toolkit roda em ambiente isolado e o `oc` está disponível no host, configure:
+
+```bash
+export OPENSHIFT_AIOPS_COMMAND_PREFIX="flatpak-spawn --host"
+export OPENSHIFT_AIOPS_OC_BIN="$HOME/.crc/cache/<versao-do-crc>/oc"
+```
+
+Use o caminho real do `oc` existente no seu ambiente.
+
+## 5. Validar localmente sem acessar o cluster
+
+```bash
+make check
+```
+
+Esse comando roda em modo offline e não consulta a API OpenShift.
+
+Valide a suíte:
+
+```bash
+python3 -m compileall -q mcp_server
+tests/run.sh
+bash tests/test_scripts.sh
+```
+
+## 6. Validar contexto OpenShift
+
+Antes de qualquer coleta, confirme que você está no cluster correto:
+
+```bash
+oc config current-context
+oc whoami
+oc whoami --show-server
+oc version
+```
+
+Para CRC/OpenShift Local, o servidor esperado normalmente é:
+
+```text
+https://api.crc.testing:6443
+```
+
+Depois rode:
+
+```bash
+make check-cluster ENVIRONMENT=laboratory CLUSTER=crc-lab
+```
+
+Esse comando é consultivo.
+
+## 7. Coleta geral de evidências
+
+```bash
+scripts/coletar-cluster.sh \
+  --environment laboratory \
+  --cluster crc-lab \
+  --output-dir evidencias \
+  --timeout 60
+```
+
+Saída esperada:
+
+```text
+evidencias/<cluster>/<timestamp>/
+```
+
+O diretório contém:
+
+- comandos executados;
+- arquivos de evidência;
+- `manifest.json`;
+- `checksums.sha256`.
+
+## 8. Diagnósticos direcionados
+
+Operador:
+
+```bash
+scripts/diagnosticar-operator.sh authentication \
+  --environment laboratory \
+  --cluster crc-lab
+```
+
+Node:
+
+```bash
+scripts/diagnosticar-node.sh <node> \
+  --environment laboratory \
+  --cluster crc-lab
+```
+
+Namespace:
+
+```bash
+scripts/diagnosticar-namespace.sh <namespace> \
+  --environment laboratory \
+  --cluster crc-lab
+```
+
+Pod com logs limitados:
+
+```bash
+scripts/diagnosticar-pod.sh <namespace> <pod> \
+  --environment laboratory \
+  --cluster crc-lab \
+  --tail 100
+```
+
+Domínios prontos:
+
+```bash
+scripts/diagnosticar-storage.sh --environment laboratory --cluster crc-lab
+scripts/diagnosticar-network.sh --environment laboratory --cluster crc-lab
+scripts/diagnosticar-ingress.sh --environment laboratory --cluster crc-lab
+scripts/diagnosticar-dns.sh --environment laboratory --cluster crc-lab
+scripts/diagnosticar-olm.sh --environment laboratory --cluster crc-lab
+scripts/diagnosticar-monitoring.sh --environment laboratory --cluster crc-lab
+scripts/verificar-capacidade.sh --environment laboratory --cluster crc-lab
+```
+
+## 9. Gerar relatório base
+
+```bash
+scripts/gerar-relatorio.sh \
+  --path evidencias/<cluster>/<timestamp> \
+  --output relatorios/relatorio-diagnostico.md
+```
+
+Os relatórios operacionais ficam em `relatorios/`, que é ignorado pelo Git por padrão.
+
+## 10. Configurar MCP para Codex
+
+Execute:
+
+```bash
+scripts/configurar-codex-mcp.sh
+```
+
+Para automação consciente:
+
+```bash
+scripts/configurar-codex-mcp.sh --yes --replace
+```
+
+Verifique:
+
+```bash
+codex mcp list
+codex mcp get openshift-readonly
+```
+
+O servidor esperado:
+
+```text
+openshift-readonly
+transport: stdio
+enabled: true
+```
+
+Importante: se a sessão Codex já estava aberta antes da configuração, abra uma nova sessão para carregar o MCP.
+
+## 11. Validar MCP via STDIO
+
+Execute a suíte:
+
+```bash
+tests/run.sh
+```
+
+Ela valida:
+
+- inicialização do servidor MCP;
+- `tools/list`;
+- schemas específicos;
+- bloqueio de produção sem confirmação;
+- ausência de ferramenta genérica de shell.
+
+## 12. Fluxo com Codex + MCP
+
+Abra uma sessão Codex na raiz do repositório:
+
+```bash
+cd openshift-aiops-toolkit
+codex
+```
+
+Use o prompt:
+
+```text
+Continue a validação Codex + MCP usando o prompt prompts/continuar-validacao-mcp.md.
+Tenho autorização para executar as fases até o preflight do must-gather.
+```
+
+Se o MCP não aparecer como ferramenta nativa da sessão, valide via STDIO e registre a limitação.
+
+## 13. Must-gather controlado
+
+Use must-gather apenas quando necessário. Ele pode coletar dados sensíveis.
+
+### 13.1 Preflight
+
+```bash
+make must-gather-preflight ENVIRONMENT=laboratory CLUSTER=crc-lab
+```
+
+O preflight valida:
+
+- contexto;
+- usuário;
+- API;
+- versão;
+- `oc adm must-gather --help`;
+- flags suportadas;
+- destino;
+- espaço disponível;
+- `.gitignore`.
+
+### 13.2 Execução
+
+Execute somente após confirmar que o cluster é o correto:
+
+```bash
+make must-gather ENVIRONMENT=laboratory CLUSTER=crc-lab
+```
+
+O toolkit usa:
+
+- `umask 077`;
+- diretório timestampado;
+- `raw/` preservado;
+- `metadata/`;
+- `analysis/`;
+- `sanitized/`;
+- manifesto;
+- checksums;
+- marcador `DO-NOT-COMMIT.txt`.
+
+Destino:
+
+```text
+evidencias/<cluster>/<timestamp>/must-gather/
+```
+
+### 13.3 Validar integridade
+
+```bash
+cd evidencias/<cluster>/<timestamp>/must-gather
+sha256sum -c metadata/checksums.sha256
+```
+
+### 13.4 Analisar offline
+
+```bash
+make analyze-must-gather RESOURCE=evidencias/<cluster>/<timestamp>/must-gather
+```
+
+Saídas:
+
+```text
+analysis/security-findings.json
+analysis/technical-index.json
+analysis/analise-must-gather.md
+```
+
+Nunca publique o diretório `raw/` sem revisão.
+
+## 14. Empacotar evidências sanitizadas
+
+Para evidências comuns:
+
+```bash
+scripts/sanitizar-evidencias.sh --path evidencias/<cluster>/<timestamp>
+scripts/empacotar-evidencias.sh --path evidencias/<cluster>/<timestamp>
+```
+
+Não use isso como garantia absoluta para must-gather bruto. Must-gather precisa de revisão manual antes de compartilhamento.
+
+## 15. Uso em produção
+
+O ambiente `production` exige confirmação explícita.
+
+Exemplo:
+
+```bash
+export OPENSHIFT_AIOPS_PRODUCTION_CONFIRM=<nome-do-cluster>
+scripts/preflight.sh \
+  --environment production \
+  --cluster <nome-do-cluster>
+```
+
+Regras:
+
+- não executar remediações;
+- não alterar RBAC;
+- não aplicar manifestos;
+- não acessar Secrets;
+- não executar must-gather sem autorização formal;
+- guardar evidências conforme política interna.
+
+## 16. Validações finais antes de commit
+
+```bash
+python3 -m compileall -q mcp_server
+tests/run.sh
+bash tests/test_scripts.sh
+make check
+git diff --check
+git status --short --ignored
+```
+
+Confirme que não há artefatos versionados:
+
+```bash
+git status --short --ignored evidencias relatorios
+```
+
+`evidencias/**` e `relatorios/**` devem aparecer como ignorados, não staged.
+
+## 17. Troubleshooting rápido
+
+`oc` não encontrado:
+
+```bash
+export OPENSHIFT_AIOPS_OC_BIN=/caminho/para/oc
+```
+
+Ambiente isolado/Flatpak:
+
+```bash
+export OPENSHIFT_AIOPS_COMMAND_PREFIX="flatpak-spawn --host"
+```
+
+MCP não aparece no Codex:
+
+```bash
+codex mcp list
+codex mcp get openshift-readonly
+```
+
+Depois reinicie a sessão Codex na raiz do repositório.
+
+Must-gather grande ou sensível:
+
+- mantenha em `evidencias/**`;
+- não publique;
+- revise `analysis/security-findings.json`;
+- compartilhe apenas derivados revisados.
+
+## 18. Sequência resumida para CRC
+
+```bash
+cd openshift-aiops-toolkit
+scripts/install.sh
+export OPENSHIFT_AIOPS_ENVIRONMENT=laboratory
+export OPENSHIFT_AIOPS_CLUSTER=crc-lab
+make check
+make check-cluster
+scripts/coletar-cluster.sh --environment laboratory --cluster crc-lab
+scripts/gerar-relatorio.sh --path evidencias/crc-lab/<timestamp>
+scripts/configurar-codex-mcp.sh --yes --replace
+make must-gather-preflight ENVIRONMENT=laboratory CLUSTER=crc-lab
+make must-gather ENVIRONMENT=laboratory CLUSTER=crc-lab
+make analyze-must-gather RESOURCE=evidencias/crc-lab/<timestamp>/must-gather
+```
+
+Substitua `<timestamp>` pelo diretório gerado.
+
