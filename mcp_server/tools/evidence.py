@@ -3,7 +3,7 @@ from .base import ToolSpec, name_schema, no_args_schema, ns_name_schema
 from ..collectors import collect_cluster_evidence, collect_target_evidence, sanitize_evidence_tree
 
 def _collect_cluster(p):
-    path=collect_cluster_evidence(cluster=p.get('cluster','cluster'), environment=p.get('environment','development'), output_dir=Path(p.get('output_dir','evidencias')))
+    path=collect_cluster_evidence(cluster=p.get('cluster','current-cluster'), environment=p.get('environment','current'), output_dir=Path(p.get('output_dir','evidencias')))
     return {'evidence_dir': str(path)}
 def _collect_target(target):
     def h(p):

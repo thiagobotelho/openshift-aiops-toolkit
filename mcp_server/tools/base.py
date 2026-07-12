@@ -22,7 +22,7 @@ class ToolSpec:
     handler: Handler
     input_schema: dict[str, Any]
 COMMON_PROPERTIES={
-    "environment":{"type":"string","enum":["development","homologation","production","laboratory"],"description":"ambiente lógico da consulta"},
+    "environment":{"type":"string","enum":["current","development","homologation","production","laboratory"],"description":"ambiente lógico da consulta; use current para o contexto ativo do oc"},
     "cluster":{"type":"string","description":"nome lógico do cluster usado para confirmação e auditoria"},
     "timeout":{"type":"integer","minimum":1,"maximum":900,"description":"timeout da consulta em segundos"},
     "confirm_production":{"type":"string","description":"confirmação explícita exigida quando environment=production"},
@@ -41,7 +41,7 @@ def extend_schema_with_common(schema: dict[str, Any]) -> dict[str, Any]:
     updated["additionalProperties"]=False
     return updated
 def validate_common_params(params: dict[str, Any]) -> dict[str, Any]:
-    environment=validate_environment(str(params.get("environment") or os.environ.get("OPENSHIFT_AIOPS_ENVIRONMENT","development")))
+    environment=validate_environment(str(params.get("environment") or os.environ.get("OPENSHIFT_AIOPS_ENVIRONMENT","current")))
     timeout=validate_timeout(params.get("timeout",60))
     cluster=params.get("cluster") or os.environ.get("OPENSHIFT_AIOPS_CLUSTER")
     cluster_name=validate_cluster(str(cluster)) if cluster else None

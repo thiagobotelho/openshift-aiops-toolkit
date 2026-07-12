@@ -1,7 +1,7 @@
 SHELL := /usr/bin/env bash
 CLUSTER ?=
 CONTEXT ?=
-ENVIRONMENT ?= development
+ENVIRONMENT ?=
 KUBECONFIG ?=
 NS ?=
 POD ?=
@@ -12,7 +12,10 @@ NODE ?=
 RESOURCE ?=
 OLD ?=
 NEW ?=
-COMMON_ARGS = --environment $(ENVIRONMENT)
+COMMON_ARGS =
+ifneq ($(ENVIRONMENT),)
+COMMON_ARGS += --environment $(ENVIRONMENT)
+endif
 ifneq ($(CLUSTER),)
 COMMON_ARGS += --cluster $(CLUSTER)
 endif

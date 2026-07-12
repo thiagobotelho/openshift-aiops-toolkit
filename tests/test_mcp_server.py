@@ -55,6 +55,12 @@ class McpServerProtocolTests(unittest.TestCase):
             payload = call_tool("current_context", {"environment": "laboratory", "cluster": "crc-lab", "timeout": 5})
         self.assertEqual(payload["exit_code"], 0)
 
+    def test_tool_call_defaults_to_current_environment(self):
+        result = CommandResult(["oc", "config", "current-context"], 0, "crc\n", "", 0.01)
+        with patch.dict("os.environ", {}, clear=True), patch("mcp_server.context.run_oc", return_value=result):
+            payload = call_tool("current_context", {"timeout": 5})
+        self.assertEqual(payload["exit_code"], 0)
+
     def test_tool_call_blocks_production_without_confirmation(self):
         with patch.dict("os.environ", {}, clear=True):
             with self.assertRaises(ValidationError):

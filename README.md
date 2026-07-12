@@ -65,13 +65,16 @@ O prefixo aceito é restrito por allowlist; não há shell arbitrário.
 
 ```bash
 scripts/preflight.sh --offline
-scripts/preflight.sh --environment development
+make check-cluster
 scripts/validar-contexto.sh
-scripts/coletar-cluster.sh --cluster cluster-dev --environment development
-scripts/gerar-relatorio.sh --path evidencias/cluster-dev/<coleta>
+scripts/coletar-cluster.sh
+LATEST="$(ls -dt evidencias/*/* | head -1)"
+scripts/gerar-relatorio.sh --path "$LATEST"
 ```
 
 `scripts/preflight.sh --offline` e `make check` não acessam a API OpenShift. Use `make check-cluster` apenas depois de confirmar que o contexto atual é o cluster esperado.
+
+Por padrão, os scripts imprimem uma saída resumida para operador humano. Para automação ou debug, adicione `--json` ou `--verbose` nos comandos suportados.
 
 ## Uso em múltiplos clusters
 
@@ -80,7 +83,7 @@ scripts/listar-clusters.sh
 scripts/coletar-cluster.sh --cluster cluster-hml --context hml-context --environment homologation
 ```
 
-O toolkit não troca contexto silenciosamente.
+O modo simples usa o contexto atual do `oc`. Para auditoria, inventário, múltiplos clusters ou produção, informe `--cluster`, `--context` e `--environment` explicitamente. O toolkit não troca contexto silenciosamente.
 
 ## Produção
 
@@ -99,7 +102,7 @@ O script de configuração do MCP mostra o comando e pede confirmação antes de
 
 As ferramentas MCP aceitam parâmetros comuns opcionais para auditoria e segurança:
 
-- `environment`: `development`, `homologation`, `laboratory` ou `production`;
+- `environment`: `current`, `development`, `homologation`, `laboratory` ou `production`;
 - `cluster`: nome lógico do cluster;
 - `timeout`: limite da consulta em segundos;
 - `confirm_production`: obrigatório quando `environment=production`.
@@ -133,9 +136,17 @@ Não coleta conteúdo de Secrets, não altera recursos, bloqueia verbos de escri
 Fluxo recomendado:
 
 ```bash
-make must-gather-preflight ENVIRONMENT=laboratory CLUSTER=crc-lab
-make must-gather ENVIRONMENT=laboratory CLUSTER=crc-lab
-make analyze-must-gather RESOURCE=evidencias/<cluster>/<timestamp>/must-gather
+make must-gather-preflight
+make must-gather
+MUST_GATHER="$(ls -dt evidencias/*/*/must-gather | head -1)"
+make analyze-must-gather RESOURCE="$MUST_GATHER"
+```
+
+Para auditoria ou produção, informe explicitamente `ENVIRONMENT` e `CLUSTER`:
+
+```bash
+make must-gather-preflight ENVIRONMENT=production CLUSTER=<nome-do-cluster>
+make must-gather ENVIRONMENT=production CLUSTER=<nome-do-cluster>
 ```
 
 O diretório bruto é classificado como confidencial e não deve ser publicado.

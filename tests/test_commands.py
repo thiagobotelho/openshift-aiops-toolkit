@@ -1,7 +1,8 @@
 import argparse, io, subprocess, unittest
 from contextlib import redirect_stdout
 from unittest.mock import patch
-from mcp_server.commands import CommandBlocked, build_oc_command, command_prefix, preflight, require_production_confirmation, run_oc, validate_oc_args
+from mcp_server.commands import CommandBlocked, build_oc_command, command_prefix, detect_cluster_name, preflight, require_production_confirmation, run_oc, validate_oc_args
+from mcp_server.models import CommandResult
 from mcp_server.validators import ValidationError
 class CommandsTests(unittest.TestCase):
     def test_blocks_mutating_oc(self):
@@ -33,6 +34,10 @@ class CommandsTests(unittest.TestCase):
             code=preflight(args)
         mocked.assert_not_called()
         self.assertIn(code, {0, 2})
+    def test_detects_crc_cluster_name_from_api_server(self):
+        command_result = CommandResult(['oc','whoami','--show-server'], 0, 'https://api.crc.testing:6443\n', '', 0.01)
+        with patch('mcp_server.commands.run_oc', return_value=command_result):
+            self.assertEqual(detect_cluster_name(), 'crc-lab')
     def test_production_requires_confirmation(self):
         args=argparse.Namespace(environment='production', cluster='cluster-prd', context=None, confirm_production=None, timeout=10, offline=True)
         with patch.dict('os.environ', {}, clear=True), patch('sys.stdin', io.StringIO()):

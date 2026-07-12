@@ -59,7 +59,7 @@ Também é seguro clonar em um diretório temporário, executar uma coleta e apa
 git clone https://github.com/thiagobotelho/openshift-aiops-toolkit.git
 cd openshift-aiops-toolkit
 scripts/install.sh
-scripts/coletar-cluster.sh --environment laboratory --cluster crc-lab
+scripts/coletar-cluster.sh
 ```
 
 Antes de apagar, copie apenas os relatórios/evidências que você precisa preservar.
@@ -120,7 +120,7 @@ O que faz:
 ### 5. Validar contexto OpenShift
 
 ```bash
-make check-cluster ENVIRONMENT=laboratory CLUSTER=crc-lab
+make check-cluster
 ```
 
 O que faz:
@@ -133,8 +133,8 @@ O que faz:
 ### 6. Fazer coleta completa segura
 
 ```bash
-scripts/coletar-cluster.sh --environment laboratory --cluster crc-lab
-LATEST="$(ls -dt evidencias/crc-lab/* | head -1)"
+scripts/coletar-cluster.sh
+LATEST="$(ls -dt evidencias/*/* | head -1)"
 (cd "$LATEST" && sha256sum -c checksums.sha256)
 ```
 
@@ -178,10 +178,10 @@ O runbook orienta o que verificar, quais evidências procurar e quando escalar.
 Depois de identificar um alvo:
 
 ```bash
-scripts/diagnosticar-pod.sh <namespace> <pod> --environment laboratory --cluster crc-lab --tail 100
-scripts/diagnosticar-node.sh <node> --environment laboratory --cluster crc-lab
-scripts/diagnosticar-namespace.sh <namespace> --environment laboratory --cluster crc-lab
-scripts/diagnosticar-operator.sh authentication --environment laboratory --cluster crc-lab
+scripts/diagnosticar-pod.sh <namespace> <pod> --tail 100
+scripts/diagnosticar-node.sh <node>
+scripts/diagnosticar-namespace.sh <namespace>
+scripts/diagnosticar-operator.sh authentication
 ```
 
 O que faz:
@@ -242,9 +242,9 @@ Depois preencha manualmente com base nas evidências.
 Use para coleta exaustiva ou suporte.
 
 ```bash
-make must-gather-preflight ENVIRONMENT=laboratory CLUSTER=crc-lab
-make must-gather ENVIRONMENT=laboratory CLUSTER=crc-lab
-MUST_GATHER="$(ls -dt evidencias/crc-lab/*/must-gather | head -1)"
+make must-gather-preflight
+make must-gather
+MUST_GATHER="$(ls -dt evidencias/*/*/must-gather | head -1)"
 make analyze-must-gather RESOURCE="$MUST_GATHER"
 ```
 

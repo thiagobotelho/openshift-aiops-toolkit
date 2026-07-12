@@ -42,6 +42,17 @@ run_python_action() {
   local action="$1"; shift || true
   if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then usage_common; exit 0; fi
   cd "${TOOLKIT_ROOT}"
-  log_info "Executando ação ${action} em modo somente leitura"
+  local label="${action}"
+  case "${action}" in
+    preflight) label="preflight" ;;
+    collect-cluster) label="coleta completa segura" ;;
+    report) label="geração de relatório" ;;
+    must-gather-preflight) label="preflight de must-gather" ;;
+    must-gather) label="must-gather controlado" ;;
+    analyze-must-gather) label="análise offline de must-gather" ;;
+    diagnosticar-*.sh) label="diagnóstico direcionado (${action%.sh})" ;;
+    verificar-*.sh) label="verificação direcionada (${action%.sh})" ;;
+  esac
+  log_info "${label}: execução somente leitura"
   "${PYTHON_BIN}" -m mcp_server.commands "${action}" "$@"
 }

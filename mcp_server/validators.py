@@ -5,7 +5,7 @@ K8S_NAME_RE = re.compile(r"^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$")
 K8S_NAMESPACE_RE = re.compile(r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")
 CONTEXT_RE = re.compile(r"^[A-Za-z0-9_.:@/-]{1,253}$")
 DANGEROUS_RE = re.compile(r"[;|&<>`$(){}\[\]\\\r\n\t\x00]")
-ALLOWED_ENVIRONMENTS = {"development", "homologation", "production", "laboratory"}
+ALLOWED_ENVIRONMENTS = {"current", "development", "homologation", "production", "laboratory"}
 ALLOWED_WORKLOAD_KINDS = {"deployment", "deploymentconfig", "statefulset", "daemonset", "job", "cronjob", "replicaset"}
 class ValidationError(ValueError): pass
 def ensure_no_dangerous(value: str, field: str = "value") -> str:

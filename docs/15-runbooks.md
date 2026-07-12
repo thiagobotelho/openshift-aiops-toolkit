@@ -21,6 +21,6 @@ Eles não são scripts e não fazem alteração no cluster.
 ## Exemplo
 
 ```bash
-scripts/coletar-cluster.sh --environment laboratory --cluster crc-lab
-scripts/diagnosticar-pod.sh <namespace> <pod> --environment laboratory --cluster crc-lab --tail 100
+scripts/coletar-cluster.sh
+scripts/diagnosticar-pod.sh <namespace> <pod> --tail 100
 ```

@@ -79,10 +79,12 @@ cp .env.example .env
 
 Edite apenas valores locais. Não coloque tokens, senhas ou kubeconfig completo no repositório.
 
-Exemplo para laboratório:
+No modo simples, nenhuma variável é obrigatória. O toolkit usa o contexto atual do `oc` e detecta um nome lógico para salvar as evidências.
+
+Se quiser fixar metadados para auditoria, inventário ou automação, você pode definir:
 
 ```bash
-export OPENSHIFT_AIOPS_ENVIRONMENT=laboratory
+export OPENSHIFT_AIOPS_ENVIRONMENT=current
 export OPENSHIFT_AIOPS_CLUSTER=crc-lab
 ```
 
@@ -131,10 +133,16 @@ https://api.crc.testing:6443
 Depois rode:
 
 ```bash
-make check-cluster ENVIRONMENT=laboratory CLUSTER=crc-lab
+make check-cluster
 ```
 
 Esse comando é consultivo.
+
+Por padrão, a saída é resumida para leitura humana. Quando precisar do JSON completo para automação ou debug:
+
+```bash
+scripts/preflight.sh --json
+```
 
 ## 7. Coleta completa segura de evidências
 
@@ -159,8 +167,6 @@ Essa é a primeira coleta recomendada. Ela consulta o cluster de forma ampla e r
 
 ```bash
 scripts/coletar-cluster.sh \
-  --environment laboratory \
-  --cluster crc-lab \
   --output-dir evidencias \
   --timeout 60
 ```
@@ -168,7 +174,7 @@ scripts/coletar-cluster.sh \
 Guarde o diretório gerado em uma variável para os próximos passos:
 
 ```bash
-LATEST="$(ls -dt evidencias/crc-lab/* | head -1)"
+LATEST="$(ls -dt evidencias/*/* | head -1)"
 echo "$LATEST"
 ```
 
@@ -222,32 +228,27 @@ Operador específico:
 
 ```bash
 scripts/diagnosticar-operator.sh authentication \
-  --environment laboratory \
-  --cluster crc-lab
+  --timeout 60
 ```
 
 Node específico:
 
 ```bash
 scripts/diagnosticar-node.sh <node> \
-  --environment laboratory \
-  --cluster crc-lab
+  --timeout 60
 ```
 
 Namespace específico:
 
 ```bash
 scripts/diagnosticar-namespace.sh <namespace> \
-  --environment laboratory \
-  --cluster crc-lab
+  --timeout 60
 ```
 
 Pod com logs limitados:
 
 ```bash
 scripts/diagnosticar-pod.sh <namespace> <pod> \
-  --environment laboratory \
-  --cluster crc-lab \
   --tail 100
 ```
 
@@ -265,13 +266,13 @@ Não existe um `diagnosticar tudo profundamente` por padrão. Para uma coleta re
 Domínios prontos para aprofundamento opcional:
 
 ```bash
-scripts/diagnosticar-storage.sh --environment laboratory --cluster crc-lab
-scripts/diagnosticar-network.sh --environment laboratory --cluster crc-lab
-scripts/diagnosticar-ingress.sh --environment laboratory --cluster crc-lab
-scripts/diagnosticar-dns.sh --environment laboratory --cluster crc-lab
-scripts/diagnosticar-olm.sh --environment laboratory --cluster crc-lab
-scripts/diagnosticar-monitoring.sh --environment laboratory --cluster crc-lab
-scripts/verificar-capacidade.sh --environment laboratory --cluster crc-lab
+scripts/diagnosticar-storage.sh
+scripts/diagnosticar-network.sh
+scripts/diagnosticar-ingress.sh
+scripts/diagnosticar-dns.sh
+scripts/diagnosticar-olm.sh
+scripts/diagnosticar-monitoring.sh
+scripts/verificar-capacidade.sh
 ```
 
 Rode esses comandos quando a coleta completa segura indicar suspeita naquele domínio ou quando você quiser complementar a análise com um recorte específico.
@@ -362,7 +363,7 @@ Use must-gather apenas quando necessário. Ele pode coletar dados sensíveis.
 ### 13.1 Preflight
 
 ```bash
-make must-gather-preflight ENVIRONMENT=laboratory CLUSTER=crc-lab
+make must-gather-preflight
 ```
 
 O preflight valida:
@@ -382,7 +383,7 @@ O preflight valida:
 Execute somente após confirmar que o cluster é o correto:
 
 ```bash
-make must-gather ENVIRONMENT=laboratory CLUSTER=crc-lab
+make must-gather
 ```
 
 O toolkit usa:
@@ -513,17 +514,15 @@ Must-gather grande ou sensível:
 ```bash
 cd openshift-aiops-toolkit
 scripts/install.sh
-export OPENSHIFT_AIOPS_ENVIRONMENT=laboratory
-export OPENSHIFT_AIOPS_CLUSTER=crc-lab
 make check
 make check-cluster
-scripts/coletar-cluster.sh --environment laboratory --cluster crc-lab
-LATEST="$(ls -dt evidencias/crc-lab/* | head -1)"
+scripts/coletar-cluster.sh
+LATEST="$(ls -dt evidencias/*/* | head -1)"
 (cd "$LATEST" && sha256sum -c checksums.sha256)
 scripts/gerar-relatorio.sh --path "$LATEST" --output relatorios/relatorio-diagnostico.md
 scripts/configurar-codex-mcp.sh --yes --replace
-make must-gather-preflight ENVIRONMENT=laboratory CLUSTER=crc-lab
-make must-gather ENVIRONMENT=laboratory CLUSTER=crc-lab
-MUST_GATHER="$(ls -dt evidencias/crc-lab/*/must-gather | head -1)"
+make must-gather-preflight
+make must-gather
+MUST_GATHER="$(ls -dt evidencias/*/*/must-gather | head -1)"
 make analyze-must-gather RESOURCE="$MUST_GATHER"
 ```
