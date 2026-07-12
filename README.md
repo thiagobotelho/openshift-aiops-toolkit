@@ -155,12 +155,13 @@ tests/run.sh
 Documentos de validação:
 
 - `docs/GUIA-PASSO-A-PASSO.md`;
+- `docs/PROCESSO-OPERACIONAL.md`;
 - `docs/auditoria-estatica.md`;
 - `docs/validacao-ambiente-local.md`;
 - `docs/validacao-mcp.md`;
 - `docs/validacao-crc.md`;
 - `docs/matriz-testes.md`;
-- `docs/matriz-compatibilidade.md`.
+- `docs/matriz-compatibilidade.md`;
 - `docs/matriz-mcp-scripts-must-gather.md`;
 - `docs/comparacao-mcp-redhat.md`.
 

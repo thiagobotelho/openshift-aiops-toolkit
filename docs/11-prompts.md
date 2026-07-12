@@ -1,21 +1,26 @@
 # Prompts
 
-Prompts em `prompts/` impõem restrições de leitura, evidências, confiança e saída esperada.
+Prompts em `prompts/` impõem restrições de leitura, uso de evidências, declaração de confiança e formato de saída esperado.
+
+Consulte também `prompts/README.md`.
+
+## Papel no processo
+
+Prompts não coletam dados e não executam remediação. Eles orientam a análise feita por Codex ou outro assistente, usando evidências já coletadas pelos scripts ou consultas consultivas via MCP.
 
 ## Fluxo recomendado
 
-1. Confirmar ambiente e cluster.
-2. Validar contexto OpenShift e usuário autenticado.
-3. Executar comandos somente leitura.
-4. Salvar evidências sanitizadas.
-5. Separar fato, hipótese e conclusão.
-6. Gerar plano de remediação sem executá-lo.
+1. Coletar evidências com `scripts/coletar-cluster.sh`.
+2. Escolher o prompt do domínio investigado.
+3. Informar o caminho das evidências.
+4. Exigir separação entre fato, hipótese e recomendação.
+5. Registrar achados em `templates/achado.md`.
 
+## Exemplo
 
-## Comandos úteis
-
-```bash
-scripts/preflight.sh
-scripts/coletar-cluster.sh --cluster cluster-dev --environment development
-scripts/gerar-relatorio.sh --path evidencias/cluster-dev/<coleta>
+```text
+Use o prompt prompts/diagnostico-cluster.md.
+Analise as evidências em evidencias/crc-lab/<timestamp>.
+Não execute remediação.
+Separe fatos, hipóteses, riscos e próximos passos.
 ```

@@ -2,20 +2,25 @@
 
 Runbooks descrevem sintomas, impacto, evidências esperadas, causas comuns, escalonamento e plano proposto.
 
+Consulte também `runbooks/README.md`.
+
+## Papel no processo
+
+Runbooks são guias humanos de triagem. Eles ajudam a decidir quais diagnósticos direcionados executar depois da coleta completa segura.
+
+Eles não são scripts e não fazem alteração no cluster.
+
 ## Fluxo recomendado
 
-1. Confirmar ambiente e cluster.
-2. Validar contexto OpenShift e usuário autenticado.
-3. Executar comandos somente leitura.
-4. Salvar evidências sanitizadas.
-5. Separar fato, hipótese e conclusão.
-6. Gerar plano de remediação sem executá-lo.
+1. Execute `scripts/coletar-cluster.sh`.
+2. Identifique o sintoma principal.
+3. Abra o runbook correspondente.
+4. Execute diagnósticos direcionados somente no alvo necessário.
+5. Registre achados e plano proposto em `templates/`.
 
-
-## Comandos úteis
+## Exemplo
 
 ```bash
-scripts/preflight.sh
-scripts/coletar-cluster.sh --cluster cluster-dev --environment development
-scripts/gerar-relatorio.sh --path evidencias/cluster-dev/<coleta>
+scripts/coletar-cluster.sh --environment laboratory --cluster crc-lab
+scripts/diagnosticar-pod.sh <namespace> <pod> --environment laboratory --cluster crc-lab --tail 100
 ```
