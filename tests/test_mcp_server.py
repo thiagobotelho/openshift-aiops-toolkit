@@ -56,16 +56,17 @@ class McpServerProtocolTests(unittest.TestCase):
         self.assertEqual(payload["exit_code"], 0)
 
     def test_tool_call_blocks_production_without_confirmation(self):
-        with self.assertRaises(ValidationError):
-            call_tool("list_configured_clusters", {"environment": "production", "cluster": "prod"})
-        payload = call_tool(
-            "list_configured_clusters",
-            {"environment": "production", "cluster": "prod", "confirm_production": "prod"},
-        )
+        with patch.dict("os.environ", {}, clear=True):
+            with self.assertRaises(ValidationError):
+                call_tool("list_configured_clusters", {"environment": "production", "cluster": "prod"})
+            payload = call_tool(
+                "list_configured_clusters",
+                {"environment": "production", "cluster": "prod", "confirm_production": "prod"},
+            )
         self.assertIn("clusters", payload)
 
     def test_tool_call_respects_environment_variables_for_production(self):
-        with patch.dict("os.environ", {"OPENSHIFT_AIOPS_ENVIRONMENT": "production", "OPENSHIFT_AIOPS_CLUSTER": "prod"}, clear=False):
+        with patch.dict("os.environ", {"OPENSHIFT_AIOPS_ENVIRONMENT": "production", "OPENSHIFT_AIOPS_CLUSTER": "prod"}, clear=True):
             with self.assertRaises(ValidationError):
                 call_tool("list_configured_clusters", {})
         with patch.dict(
@@ -75,7 +76,7 @@ class McpServerProtocolTests(unittest.TestCase):
                 "OPENSHIFT_AIOPS_CLUSTER": "prod",
                 "OPENSHIFT_AIOPS_PRODUCTION_CONFIRM": "prod",
             },
-            clear=False,
+            clear=True,
         ):
             payload = call_tool("list_configured_clusters", {})
         self.assertIn("clusters", payload)

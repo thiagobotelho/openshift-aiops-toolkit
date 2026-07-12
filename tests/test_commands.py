@@ -35,8 +35,10 @@ class CommandsTests(unittest.TestCase):
         self.assertIn(code, {0, 2})
     def test_production_requires_confirmation(self):
         args=argparse.Namespace(environment='production', cluster='cluster-prd', context=None, confirm_production=None, timeout=10, offline=True)
-        with self.assertRaises(ValidationError):
-            require_production_confirmation(args)
+        with patch.dict('os.environ', {}, clear=True), patch('sys.stdin', io.StringIO()):
+            with self.assertRaises(ValidationError):
+                require_production_confirmation(args)
         args.confirm_production='cluster-prd'
-        require_production_confirmation(args)
+        with patch.dict('os.environ', {}, clear=True):
+            require_production_confirmation(args)
 if __name__ == '__main__': unittest.main()
