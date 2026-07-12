@@ -138,6 +138,19 @@ Esse comando é consultivo.
 
 ## 7. Coleta geral de evidências
 
+Essa é a primeira coleta recomendada. Ela já consulta o cluster de forma ampla e registra uma visão geral de:
+
+- identidade, API e versão do cluster;
+- ClusterOperators;
+- nodes;
+- pods que não estão em `Running`;
+- eventos `Warning`;
+- PVCs e StorageClasses;
+- routes e services;
+- regras de monitoring.
+
+Ela não coleta YAML e logs de todos os pods por padrão. Isso é intencional: em clusters maiores, uma coleta profunda de todos os recursos gera muito volume, aumenta o risco de capturar dados sensíveis e dificulta a análise.
+
 ```bash
 scripts/coletar-cluster.sh \
   --environment laboratory \
@@ -161,7 +174,20 @@ O diretório contém:
 
 ## 8. Diagnósticos direcionados
 
-Operador:
+Use estes comandos depois da coleta geral, quando você já sabe qual recurso precisa de drilldown.
+
+Eles coletam mais detalhes de um alvo específico, como `describe`, eventos relacionados e logs limitados quando aplicável.
+
+Para descobrir os alvos:
+
+```bash
+oc get clusteroperators
+oc get nodes
+oc get namespaces
+oc get pods -A
+```
+
+Operador específico:
 
 ```bash
 scripts/diagnosticar-operator.sh authentication \
@@ -169,7 +195,7 @@ scripts/diagnosticar-operator.sh authentication \
   --cluster crc-lab
 ```
 
-Node:
+Node específico:
 
 ```bash
 scripts/diagnosticar-node.sh <node> \
@@ -177,7 +203,7 @@ scripts/diagnosticar-node.sh <node> \
   --cluster crc-lab
 ```
 
-Namespace:
+Namespace específico:
 
 ```bash
 scripts/diagnosticar-namespace.sh <namespace> \
@@ -193,6 +219,8 @@ scripts/diagnosticar-pod.sh <namespace> <pod> \
   --cluster crc-lab \
   --tail 100
 ```
+
+Não existe um `diagnosticar tudo profundamente` por padrão. Para uma coleta realmente exaustiva, use o fluxo controlado de must-gather descrito mais abaixo.
 
 Domínios prontos:
 
@@ -452,4 +480,3 @@ make analyze-must-gather RESOURCE=evidencias/crc-lab/<timestamp>/must-gather
 ```
 
 Substitua `<timestamp>` pelo diretório gerado.
-
