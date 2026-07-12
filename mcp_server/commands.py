@@ -16,7 +16,7 @@ from .validators import (
 
 MUTATING_OC_VERBS={"delete","apply","create","patch","edit","replace","scale","expose","set","annotate","label","exec","rsh","debug","attach","cp","rsync","port-forward"}
 MUTATING_OC_ADM_VERBS={"drain","cordon","uncordon","taint","policy","groups","certificate"}
-READONLY_OC_VERBS={"config","whoami","version","get","describe","logs","auth","adm"}
+READONLY_OC_VERBS={"config","whoami","version","api-resources","api-versions","get","describe","logs","auth","adm"}
 READONLY_OC_ADM_VERBS={"top","inspect","must-gather"}
 SECRET_RESOURCES={"secret","secrets"}
 GLOBAL_FLAGS_WITH_VALUE={"--context","--kubeconfig","--namespace","-n","-o","--output","--field-selector","--sort-by","--tail","-c"}
@@ -63,22 +63,45 @@ def slugify_cluster(value: str | None, fallback: str = 'current-cluster') -> str
     raw = re.sub(r'-+', '-', raw).strip('-.')
     return raw or fallback
 
+def cluster_name_from_api_server(value: str | None, fallback: str = 'openshift-cluster') -> str:
+    """Derive a stable, filesystem-safe cluster identifier from an API URL.
+
+    Examples:
+      https://api.crc.testing:6443 -> crc
+      https://api.cluster-prd.example.com:6443 -> cluster-prd
+    """
+    raw = (value or '').strip()
+    if not raw:
+        return fallback
+    parsed = urlparse(raw)
+    host = parsed.hostname or raw
+    labels = [item for item in host.lower().split('.') if item]
+    if labels and labels[0] == 'api' and len(labels) > 1:
+        return slugify_cluster(labels[1], fallback=fallback)
+    if labels:
+        return slugify_cluster(labels[0], fallback=fallback)
+    return slugify_cluster(host, fallback=fallback)
+
 def detect_cluster_name(*, timeout: int = 10, context: str | None = None, kubeconfig: str | None = None) -> str:
+    infrastructure = run_oc(['get', 'infrastructure', 'cluster', '-o', 'json'], timeout=timeout, context=context, kubeconfig=kubeconfig)
+    if infrastructure.exit_code == 0 and infrastructure.stdout.strip():
+        try:
+            data = json.loads(infrastructure.stdout)
+            name = ((data.get('status') or {}).get('infrastructureName') or '').strip()
+            if name:
+                return slugify_cluster(name, fallback='openshift-cluster')
+        except Exception:
+            pass
     server = run_oc(['whoami', '--show-server'], timeout=timeout, context=context, kubeconfig=kubeconfig)
     if server.exit_code == 0 and server.stdout.strip():
-        parsed = urlparse(server.stdout.strip())
-        host = parsed.hostname or server.stdout.strip()
-        label = slugify_cluster(host)
-        if label in {'crc.testing', 'crc-testing', 'api-crc-testing'}:
-            return 'crc-lab'
-        return label
+        return cluster_name_from_api_server(server.stdout.strip())
     current = run_oc(['config', 'current-context'], timeout=timeout, context=context, kubeconfig=kubeconfig)
     if current.exit_code == 0 and current.stdout.strip():
         parts = [part for part in current.stdout.strip().split('/') if part]
         if len(parts) >= 2:
             return slugify_cluster(parts[1])
         return slugify_cluster(current.stdout.strip())
-    return 'current-cluster'
+    return 'openshift-cluster'
 
 def resolve_cluster_name(args: argparse.Namespace) -> str:
     value = args.cluster or os.environ.get('OPENSHIFT_AIOPS_CLUSTER')
@@ -164,7 +187,7 @@ def print_preflight_summary(payload: dict[str, Any]) -> None:
         can_i = command_exit(payload, 'can_i_list')
         if can_i is not None:
             print(f"Permissões consultadas: {'OK' if can_i == 0 else 'falhou'}")
-        print('Próximo passo sugerido: scripts/coletar-cluster.sh')
+        print('Próximo passo sugerido: ./openshift-aiops health')
     else:
         print('Próximo passo sugerido: make check-cluster')
 
@@ -176,35 +199,37 @@ def print_path_result(title: str, path: Path | str, *, next_steps: list[str] | N
         for step in next_steps:
             print(f'  {step}')
 
-def require_production_confirmation(args: argparse.Namespace) -> None:
-    if args.environment != 'production':
+def warn_deprecated_parameters(argv: Sequence[str] | None, args: argparse.Namespace) -> None:
+    raw = list(argv) if argv is not None else sys.argv[1:]
+    messages: list[str] = []
+    if '--environment' in raw or os.environ.get('OPENSHIFT_AIOPS_ENVIRONMENT') not in {None, '', DEFAULT_ENVIRONMENT}:
+        messages.append('AVISO: --environment/OPENSHIFT_AIOPS_ENVIRONMENT está obsoleto para diagnósticos comuns; o contexto atual do oc é usado por padrão.')
+    if '--cluster' in raw or os.environ.get('OPENSHIFT_AIOPS_CLUSTER'):
+        messages.append('AVISO: --cluster/OPENSHIFT_AIOPS_CLUSTER agora é metadado/alias opcional; a identidade principal vem da API e do contexto atual.')
+    if '--confirm-production' in raw or os.environ.get('OPENSHIFT_AIOPS_PRODUCTION_CONFIRM'):
+        messages.append('AVISO: --confirm-production está obsoleto para consultas read-only; must-gather possui confirmação própria.')
+    if args.action in {'must-gather', 'must-gather-preflight'}:
         return
-    expected = args.cluster or args.context or 'production'
-    provided = args.confirm_production or os.environ.get('OPENSHIFT_AIOPS_PRODUCTION_CONFIRM')
-    if provided == expected:
+    if getattr(args, 'json', False):
         return
-    identity = {}
-    if not getattr(args, 'offline', False) and oc_available():
-        for name, oc_args in {
-            'context': ['config', 'current-context'],
-            'user': ['whoami'],
-            'server': ['whoami', '--show-server'],
-            'version': ['version'],
-            'infrastructure': ['get', 'infrastructure', 'cluster', '-o', 'json'],
-        }.items():
-            identity[name] = run_oc(oc_args, timeout=min(args.timeout, 30)).to_dict()
-    message = {
-        'environment': 'production',
-        'expected_confirmation': expected,
-        'identity': identity,
-        'how_to_confirm': f'export OPENSHIFT_AIOPS_PRODUCTION_CONFIRM={expected}',
-    }
+    for message in messages:
+        print(message, file=sys.stderr)
+
+def confirm_must_gather(args: argparse.Namespace, cluster_name: str) -> None:
+    provided = getattr(args, 'confirm_must_gather', None) or os.environ.get('OPENSHIFT_AIOPS_MUST_GATHER_CONFIRM')
+    if provided == cluster_name:
+        return
+    message = (
+        'ATENÇÃO: o must-gather cria recursos temporários no cluster e pode coletar dados sensíveis.\n'
+        f'Cluster: {cluster_name}\n'
+        f'Destino: {args.output_dir}\n'
+        f'Digite "{cluster_name}" para confirmar: '
+    )
     if sys.stdin.isatty():
-        print(json.dumps(message, ensure_ascii=False, indent=2), file=sys.stderr)
-        typed = input(f"Digite '{expected}' para confirmar produção: ").strip()
-        if typed == expected:
+        typed = input(message).strip()
+        if typed == cluster_name:
             return
-    raise ValidationError('ambiente production exige confirmação explícita do nome do cluster/contexto')
+    raise ValidationError('must-gather exige confirmação explícita do identificador do cluster')
 
 def truncate(text: str, max_bytes: int = 1_048_576) -> tuple[str, bool]:
     data=text.encode('utf-8', errors='replace')
@@ -302,7 +327,7 @@ def preflight(args):
         return 0 if all(payload['required_tools'].values()) else 2
     if oc_available():
         for name, oc_args in {'current_context':['config','current-context'], 'whoami':['whoami'], 'server':['whoami','--show-server'], 'version':['version'], 'clusterversion':['get','clusterversion','-o','json'], 'infrastructure':['get','infrastructure','cluster','-o','json'], 'can_i_list':['auth','can-i','--list']}.items():
-            payload[name]=run_oc(oc_args, timeout=args.timeout).to_dict()
+            payload[name]=run_oc(oc_args, timeout=args.timeout, context=args.context, kubeconfig=args.kubeconfig).to_dict()
     if getattr(args, 'json', False) or getattr(args, 'verbose', False):
         emit_json(payload)
     else:
@@ -323,7 +348,7 @@ def list_clusters(args):
                 print(f"- {item.get('name')} ({item.get('environment', 'sem ambiente')}) contexto={item.get('context', '-')}")
     return 0
 def show_context(args):
-    r=run_oc(['config','current-context'], timeout=args.timeout)
+    r=run_oc(['config','current-context'], timeout=args.timeout, context=args.context, kubeconfig=args.kubeconfig)
     if getattr(args, 'json', False):
         emit_json(r.to_dict())
     else:
@@ -408,7 +433,7 @@ def compare(args):
 def must_gather_preflight(args):
     from .must_gather import collect_preflight
     cluster_name = resolve_cluster_name(args)
-    payload = collect_preflight(cluster_name, args.timeout, args.output_dir)
+    payload = collect_preflight(cluster_name, args.timeout, args.output_dir, context=args.context, kubeconfig=args.kubeconfig)
     if getattr(args, 'json', False) or getattr(args, 'verbose', False):
         emit_json(payload)
     else:
@@ -424,7 +449,8 @@ def must_gather_preflight(args):
 def must_gather_collect(args):
     from .must_gather import execute_must_gather
     cluster_name = resolve_cluster_name(args)
-    out = execute_must_gather(cluster=cluster_name, output_dir=args.output_dir, timeout=args.timeout)
+    confirm_must_gather(args, cluster_name)
+    out = execute_must_gather(cluster=cluster_name, output_dir=args.output_dir, timeout=args.timeout, context=args.context, kubeconfig=args.kubeconfig)
     if getattr(args, 'json', False):
         emit_json({'must_gather_dir': str(out), 'cluster': cluster_name})
     else:
@@ -464,6 +490,7 @@ def build_parser():
     p.add_argument('--namespace','-n'); p.add_argument('--kind'); p.add_argument('--path'); p.add_argument('--output'); p.add_argument('--old'); p.add_argument('--new'); p.add_argument('--title', default='Relatório de Diagnóstico OpenShift'); p.add_argument('--dry-run', action='store_true'); p.add_argument('--offline', action='store_true'); p.add_argument('--verbose', action='store_true')
     p.add_argument('--json', action='store_true', help='mantém saída detalhada em JSON para automação')
     p.add_argument('--confirm-production')
+    p.add_argument('--confirm-must-gather')
     return p
 
 def main(argv: Sequence[str] | None=None) -> int:
@@ -471,7 +498,7 @@ def main(argv: Sequence[str] | None=None) -> int:
     if args.action in {'help','--help','-h'}: p.print_help(); return 0
     try:
         args.environment=validate_environment(args.environment)
-        require_production_confirmation(args)
+        warn_deprecated_parameters(argv, args)
         actions={'preflight':preflight,'list-clusters':list_clusters,'context':show_context,'validate-context':show_context,'collect-cluster':collect_cluster,'collect-diagnostic':collect_cluster,'report':generate_report,'sanitize':sanitize_file,'bundle':package_evidence,'compare':compare,'uninstall':uninstall,'must-gather-preflight':must_gather_preflight,'must-gather':must_gather_collect,'analyze-must-gather':must_gather_analyze}
         if args.action == 'diagnose': args.target=args.name or 'cluster'; return diagnose(args)
         if args.action in actions: return actions[args.action](args)

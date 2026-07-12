@@ -6,7 +6,6 @@ from unittest.mock import patch
 
 from mcp_server.models import CommandResult
 from mcp_server.tools import call_tool, list_tools
-from mcp_server.validators import ValidationError
 
 
 class McpServerProtocolTests(unittest.TestCase):
@@ -46,14 +45,28 @@ class McpServerProtocolTests(unittest.TestCase):
         schema = tools["cluster_identity"]["inputSchema"]
         self.assertIn("environment", schema["properties"])
         self.assertIn("cluster", schema["properties"])
+        self.assertIn("context", schema["properties"])
+        self.assertIn("kubeconfig", schema["properties"])
+        self.assertIn("output", schema["properties"])
         self.assertIn("timeout", schema["properties"])
+        self.assertTrue(schema["properties"]["environment"].get("deprecated"))
+        self.assertTrue(schema["properties"]["cluster"].get("deprecated"))
         self.assertFalse(schema["additionalProperties"])
+
+    def test_no_generic_shell_tool_is_published(self):
+        names = {tool["name"] for tool in list_tools()}
+        forbidden = {"run_command", "run_shell", "execute_command", "execute_oc", "terminal"}
+        self.assertFalse(names & forbidden)
 
     def test_tool_call_accepts_common_parameters(self):
         result = CommandResult(["oc", "config", "current-context"], 0, "crc\n", "", 0.01)
         with patch("mcp_server.context.run_oc", return_value=result):
             payload = call_tool("current_context", {"environment": "laboratory", "cluster": "crc-lab", "timeout": 5})
         self.assertEqual(payload["exit_code"], 0)
+        self.assertEqual(payload["schema_version"], "1.0")
+        self.assertEqual(payload["tool"], "current_context")
+        self.assertEqual(payload["execution_status"], "success")
+        self.assertIn("result", payload)
 
     def test_tool_call_defaults_to_current_environment(self):
         result = CommandResult(["oc", "config", "current-context"], 0, "crc\n", "", 0.01)
@@ -61,29 +74,16 @@ class McpServerProtocolTests(unittest.TestCase):
             payload = call_tool("current_context", {"timeout": 5})
         self.assertEqual(payload["exit_code"], 0)
 
-    def test_tool_call_blocks_production_without_confirmation(self):
+    def test_tool_call_does_not_block_production_for_readonly_queries(self):
         with patch.dict("os.environ", {}, clear=True):
-            with self.assertRaises(ValidationError):
-                call_tool("list_configured_clusters", {"environment": "production", "cluster": "prod"})
             payload = call_tool(
                 "list_configured_clusters",
-                {"environment": "production", "cluster": "prod", "confirm_production": "prod"},
+                {"environment": "production", "cluster": "prod"},
             )
         self.assertIn("clusters", payload)
 
     def test_tool_call_respects_environment_variables_for_production(self):
         with patch.dict("os.environ", {"OPENSHIFT_AIOPS_ENVIRONMENT": "production", "OPENSHIFT_AIOPS_CLUSTER": "prod"}, clear=True):
-            with self.assertRaises(ValidationError):
-                call_tool("list_configured_clusters", {})
-        with patch.dict(
-            "os.environ",
-            {
-                "OPENSHIFT_AIOPS_ENVIRONMENT": "production",
-                "OPENSHIFT_AIOPS_CLUSTER": "prod",
-                "OPENSHIFT_AIOPS_PRODUCTION_CONFIRM": "prod",
-            },
-            clear=True,
-        ):
             payload = call_tool("list_configured_clusters", {})
         self.assertIn("clusters", payload)
 

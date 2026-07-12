@@ -4,8 +4,8 @@ Coleta grande e potencialmente sensível. Exige confirmação, valida espaço, g
 
 ## Fluxo recomendado
 
-1. Confirmar ambiente e cluster.
-2. Validar contexto OpenShift e usuário autenticado.
+1. Confirmar o contexto atual do `oc`.
+2. Validar API OpenShift e usuário autenticado.
 3. Executar comandos somente leitura.
 4. Salvar evidências sanitizadas.
 5. Separar fato, hipótese e conclusão.
@@ -15,7 +15,7 @@ Coleta grande e potencialmente sensível. Exige confirmação, valida espaço, g
 ## Comandos úteis
 
 ```bash
-scripts/preflight.sh
-scripts/coletar-cluster.sh --cluster cluster-dev --environment development
-scripts/gerar-relatorio.sh --path evidencias/cluster-dev/<coleta>
+make must-gather-preflight
+make must-gather
+scripts/gerar-relatorio.sh --path evidencias/<cluster>/<coleta>
 ```

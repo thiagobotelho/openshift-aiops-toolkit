@@ -14,6 +14,7 @@ dependencies = ["PyYAML>=6.0", "mcp>=1.0.0"]
 keywords = ["openshift", "kubernetes", "mcp", "sre", "aiops", "diagnostics"]
 
 [project.scripts]
+openshift-aiops = "mcp_server.cli:main"
 oc-aiops = "mcp_server.commands:main"
 openshift-aiops-mcp = "mcp_server.server:main"
 

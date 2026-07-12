@@ -4,8 +4,8 @@ Use `.env.example`, inventários e perfis de ambiente. Nunca armazene credenciai
 
 ## Fluxo recomendado
 
-1. Confirmar ambiente e cluster.
-2. Validar contexto OpenShift e usuário autenticado.
+1. Confirmar o contexto atual do `oc`.
+2. Validar API OpenShift e usuário autenticado.
 3. Executar comandos somente leitura.
 4. Salvar evidências sanitizadas.
 5. Separar fato, hipótese e conclusão.
@@ -15,7 +15,7 @@ Use `.env.example`, inventários e perfis de ambiente. Nunca armazene credenciai
 ## Comandos úteis
 
 ```bash
-scripts/preflight.sh
-scripts/coletar-cluster.sh --cluster cluster-dev --environment development
-scripts/gerar-relatorio.sh --path evidencias/cluster-dev/<coleta>
+./openshift-aiops health
+./openshift-aiops collect
+scripts/gerar-relatorio.sh --path evidencias/<cluster>/<coleta>
 ```

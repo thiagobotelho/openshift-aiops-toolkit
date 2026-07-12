@@ -12,6 +12,7 @@ if [ -z "${PYTHON_BIN}" ]; then
   fi
 fi
 source "${SCRIPT_DIR}/logging.sh"
+source "${SCRIPT_DIR}/output.sh"
 source "${SCRIPT_DIR}/security.sh"
 source "${SCRIPT_DIR}/validators.sh"
 source "${SCRIPT_DIR}/context.sh"
@@ -24,10 +25,10 @@ Uso:
   script [argumentos] [opções]
 
 Opções comuns:
-  --cluster <nome>          Cluster do inventário.
+  --cluster <nome>          OBSOLETO: alias opcional para compatibilidade.
   --context <contexto>      Contexto kubeconfig explícito.
   --kubeconfig <arquivo>    Caminho do kubeconfig.
-  --environment <ambiente>  development, homologation, production ou laboratory.
+  --environment <ambiente>  OBSOLETO: metadado opcional; padrão é current.
   --output-dir <diretório>  Diretório de evidências.
   --timeout <segundos>      Timeout por comando.
   --tail <linhas>           Linhas de log para diagnóstico de Pod.

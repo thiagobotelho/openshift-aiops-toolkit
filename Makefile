@@ -12,6 +12,9 @@ NODE ?=
 RESOURCE ?=
 OLD ?=
 NEW ?=
+OUTPUT ?= human
+TIMEOUT ?= 60
+VERBOSE ?=
 COMMON_ARGS =
 ifneq ($(ENVIRONMENT),)
 COMMON_ARGS += --environment $(ENVIRONMENT)
@@ -25,7 +28,17 @@ endif
 ifneq ($(KUBECONFIG),)
 COMMON_ARGS += --kubeconfig $(KUBECONFIG)
 endif
-.PHONY: help install uninstall check check-cluster list-clusters context health collect cluster pod workload namespace operator node storage network ingress dns api etcd auth monitoring certificates olm upgrade must-gather-preflight must-gather analyze-must-gather inspect report sanitize bundle compare mcp test lint clean
+CLI_ARGS = --output $(OUTPUT) --timeout $(TIMEOUT)
+ifneq ($(CONTEXT),)
+CLI_ARGS += --context $(CONTEXT)
+endif
+ifneq ($(KUBECONFIG),)
+CLI_ARGS += --kubeconfig $(KUBECONFIG)
+endif
+ifneq ($(VERBOSE),)
+CLI_ARGS += --verbose
+endif
+.PHONY: help install uninstall check check-cluster list-clusters context health collect cluster operators nodes pods pod workload namespace operator node storage network ingress dns api etcd auth monitoring certificates capacity events olm upgrade must-gather-preflight must-gather analyze-must-gather inspect report sanitize bundle compare mcp test lint clean
 help: ## Mostra ajuda
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "%-22s %s\n", $$1, $$2}'
 install: ## Instala ambiente local
@@ -41,9 +54,17 @@ list-clusters: ## Lista clusters do inventário
 context: ## Mostra contexto atual
 	@scripts/validar-contexto.sh $(COMMON_ARGS)
 health: ## Coleta diagnóstico resumido
-	@scripts/resumo-saude.sh $(COMMON_ARGS)
-collect cluster: ## Coleta evidências gerais do cluster
+	@./openshift-aiops health $(CLI_ARGS)
+collect: ## Coleta evidências gerais do cluster
 	@scripts/coletar-cluster.sh $(COMMON_ARGS)
+cluster: ## Mostra identidade do cluster atual
+	@./openshift-aiops cluster $(CLI_ARGS)
+operators: ## Lista/resume ClusterOperators
+	@./openshift-aiops operators $(CLI_ARGS)
+nodes: ## Lista/resume nodes
+	@./openshift-aiops nodes $(CLI_ARGS)
+pods: ## Lista/resume pods problemáticos
+	@./openshift-aiops pods $(CLI_ARGS)
 pod: ## Diagnostica Pod: make pod NS=ns POD=pod
 	@test -n "$(NS)" && test -n "$(POD)"
 	@scripts/diagnosticar-pod.sh $(NS) $(POD) $(COMMON_ARGS)
@@ -60,13 +81,13 @@ node: ## Diagnostica node
 	@test -n "$(NODE)"
 	@scripts/diagnosticar-node.sh $(NODE) $(COMMON_ARGS)
 storage: ## Diagnóstico de storage
-	@scripts/diagnosticar-storage.sh $(COMMON_ARGS)
+	@./openshift-aiops storage $(CLI_ARGS)
 network: ## Diagnóstico de rede
-	@scripts/diagnosticar-network.sh $(COMMON_ARGS)
+	@./openshift-aiops network $(CLI_ARGS)
 ingress: ## Diagnóstico de ingress
-	@scripts/diagnosticar-ingress.sh $(COMMON_ARGS)
+	@./openshift-aiops ingress $(CLI_ARGS)
 dns: ## Diagnóstico de DNS
-	@scripts/diagnosticar-dns.sh $(COMMON_ARGS)
+	@./openshift-aiops dns $(CLI_ARGS)
 api: ## Diagnóstico de API
 	@scripts/diagnosticar-api.sh $(COMMON_ARGS)
 etcd: ## Diagnóstico de etcd
@@ -74,11 +95,15 @@ etcd: ## Diagnóstico de etcd
 auth: ## Diagnóstico de authentication
 	@scripts/diagnosticar-authentication.sh $(COMMON_ARGS)
 monitoring: ## Diagnóstico de monitoring
-	@scripts/diagnosticar-monitoring.sh $(COMMON_ARGS)
+	@./openshift-aiops monitoring $(CLI_ARGS)
 certificates: ## Diagnóstico de certificados e CSRs
-	@scripts/diagnosticar-certificados.sh $(COMMON_ARGS)
+	@./openshift-aiops certificates $(CLI_ARGS)
+capacity: ## Capacidade dos nodes
+	@./openshift-aiops capacity $(CLI_ARGS)
+events: ## Eventos Warning recentes
+	@./openshift-aiops events $(CLI_ARGS)
 olm: ## Diagnóstico de OLM
-	@scripts/diagnosticar-olm.sh $(COMMON_ARGS)
+	@./openshift-aiops olm $(CLI_ARGS)
 upgrade: ## Verifica status de upgrade
 	@scripts/verificar-upgrade.sh $(COMMON_ARGS)
 must-gather-preflight: ## Preflight consultivo de must-gather

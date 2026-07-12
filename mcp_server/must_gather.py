@@ -114,12 +114,19 @@ def run_host_command(args: list[str], timeout: int = 30) -> dict[str, Any]:
         }
 
 
-def collect_preflight(cluster: str | None, timeout: int, output_dir: str | Path = "evidencias", base: Path | None = None) -> dict[str, Any]:
+def collect_preflight(
+    cluster: str | None,
+    timeout: int,
+    output_dir: str | Path = "evidencias",
+    base: Path | None = None,
+    context: str | None = None,
+    kubeconfig: str | None = None,
+) -> dict[str, Any]:
     timeout = validate_timeout(timeout)
     base = base or must_gather_base(cluster, output_dir)
     usage = shutil.disk_usage(base.parent if base.parent.exists() else config.project_root())
     statvfs = os.statvfs(base.parent if base.parent.exists() else config.project_root())
-    help_result = run_oc(["adm", "must-gather", "--help"], timeout=timeout).to_dict()
+    help_result = run_oc(["adm", "must-gather", "--help"], timeout=timeout, context=context, kubeconfig=kubeconfig).to_dict()
     help_text = help_result.get("stdout", "")
     supports = {
         "dest_dir": "--dest-dir" in help_text,
@@ -136,13 +143,13 @@ def collect_preflight(cluster: str | None, timeout: int, output_dir: str | Path 
         "disk": {"total": usage.total, "used": usage.used, "free": usage.free},
         "inodes": {"files": statvfs.f_files, "free": statvfs.f_ffree},
         "crc_status": run_host_command(["crc", "status"], timeout=min(timeout, 30)),
-        "context": run_oc(["config", "current-context"], timeout=timeout).to_dict(),
-        "user": run_oc(["whoami"], timeout=timeout).to_dict(),
-        "server": run_oc(["whoami", "--show-server"], timeout=timeout).to_dict(),
-        "version": run_oc(["version"], timeout=timeout).to_dict(),
-        "infrastructure": run_oc(["get", "infrastructure", "cluster", "-o", "json"], timeout=timeout).to_dict(),
-        "clusterversion": run_oc(["get", "clusterversion", "-o", "json"], timeout=timeout).to_dict(),
-        "permissions": run_oc(["auth", "can-i", "--list"], timeout=timeout).to_dict(),
+        "context": run_oc(["config", "current-context"], timeout=timeout, context=context, kubeconfig=kubeconfig).to_dict(),
+        "user": run_oc(["whoami"], timeout=timeout, context=context, kubeconfig=kubeconfig).to_dict(),
+        "server": run_oc(["whoami", "--show-server"], timeout=timeout, context=context, kubeconfig=kubeconfig).to_dict(),
+        "version": run_oc(["version"], timeout=timeout, context=context, kubeconfig=kubeconfig).to_dict(),
+        "infrastructure": run_oc(["get", "infrastructure", "cluster", "-o", "json"], timeout=timeout, context=context, kubeconfig=kubeconfig).to_dict(),
+        "clusterversion": run_oc(["get", "clusterversion", "-o", "json"], timeout=timeout, context=context, kubeconfig=kubeconfig).to_dict(),
+        "permissions": run_oc(["auth", "can-i", "--list"], timeout=timeout, context=context, kubeconfig=kubeconfig).to_dict(),
         "must_gather_help": help_result,
         "supported_options": supports,
     }
@@ -152,7 +159,7 @@ def collect_preflight(cluster: str | None, timeout: int, output_dir: str | Path 
     if supports["all_images"]:
         command.append("--all-images=false")
     payload["planned_oc_args"] = command
-    payload["planned_command"] = build_oc_command(command)
+    payload["planned_command"] = build_oc_command(command, context=context, kubeconfig=kubeconfig)
     payload["finished_at"] = utc_now()
     return payload
 
@@ -177,22 +184,22 @@ def write_checksums(base: Path) -> Path:
     return checksum_path
 
 
-def execute_must_gather(*, cluster: str | None, output_dir: str | Path, timeout: int) -> Path:
+def execute_must_gather(*, cluster: str | None, output_dir: str | Path, timeout: int, context: str | None = None, kubeconfig: str | None = None) -> Path:
     timeout = validate_timeout(timeout)
     base = must_gather_base(cluster, output_dir)
     paths = prepare_directories(base)
-    preflight = collect_preflight(cluster, timeout, output_dir, base=base)
+    preflight = collect_preflight(cluster, timeout, output_dir, base=base, context=context, kubeconfig=kubeconfig)
     command_args = list(preflight["planned_oc_args"])
     if not any(arg.startswith("--dest-dir") for arg in command_args):
         raise RuntimeError("oc adm must-gather local não informou suporte a --dest-dir; execução bloqueada")
-    command = build_oc_command(command_args)
+    command = build_oc_command(command_args, context=context, kubeconfig=kubeconfig)
     started = time.monotonic()
     started_at = utc_now()
     completed = subprocess.run(command, capture_output=True, text=True, timeout=timeout, check=False)
     duration = time.monotonic() - started
     (paths["metadata"] / "stdout.log").write_text(completed.stdout, encoding="utf-8", errors="replace")
     (paths["metadata"] / "stderr.log").write_text(completed.stderr, encoding="utf-8", errors="replace")
-    residual = run_oc(["get", "pods", "-A", "-o", "wide"], timeout=min(timeout, 60)).to_dict()
+    residual = run_oc(["get", "pods", "-A", "-o", "wide"], timeout=min(timeout, 60), context=context, kubeconfig=kubeconfig).to_dict()
     write_json(paths["metadata"] / "residual-pods.json", residual)
     manifest = {
         "type": "must-gather",

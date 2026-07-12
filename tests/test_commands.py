@@ -1,9 +1,9 @@
 import argparse, io, subprocess, unittest
 from contextlib import redirect_stdout
+from pathlib import Path
 from unittest.mock import patch
-from mcp_server.commands import CommandBlocked, build_oc_command, command_prefix, detect_cluster_name, preflight, require_production_confirmation, run_oc, validate_oc_args
+from mcp_server.commands import CommandBlocked, build_oc_command, cluster_name_from_api_server, command_prefix, detect_cluster_name, preflight, run_oc, validate_oc_args
 from mcp_server.models import CommandResult
-from mcp_server.validators import ValidationError
 class CommandsTests(unittest.TestCase):
     def test_blocks_mutating_oc(self):
         for args in [['delete','pod','x'], ['patch','deployment','x'], ['adm','drain','node-a']]:
@@ -34,16 +34,32 @@ class CommandsTests(unittest.TestCase):
             code=preflight(args)
         mocked.assert_not_called()
         self.assertIn(code, {0, 2})
-    def test_detects_crc_cluster_name_from_api_server(self):
+    def test_detects_cluster_name_from_infrastructure_first(self):
+        infrastructure = CommandResult(['oc','get','infrastructure','cluster','-o','json'], 0, '{"status":{"infrastructureName":"crc-tg922"}}\n', '', 0.01)
+        with patch('mcp_server.commands.run_oc', return_value=infrastructure):
+            self.assertEqual(detect_cluster_name(), 'crc-tg922')
+    def test_detects_crc_cluster_name_from_api_server_fallback(self):
+        infrastructure = CommandResult(['oc','get','infrastructure','cluster','-o','json'], 1, '', 'not found', 0.01)
         command_result = CommandResult(['oc','whoami','--show-server'], 0, 'https://api.crc.testing:6443\n', '', 0.01)
-        with patch('mcp_server.commands.run_oc', return_value=command_result):
-            self.assertEqual(detect_cluster_name(), 'crc-lab')
-    def test_production_requires_confirmation(self):
-        args=argparse.Namespace(environment='production', cluster='cluster-prd', context=None, confirm_production=None, timeout=10, offline=True)
-        with patch.dict('os.environ', {}, clear=True), patch('sys.stdin', io.StringIO()):
-            with self.assertRaises(ValidationError):
-                require_production_confirmation(args)
-        args.confirm_production='cluster-prd'
-        with patch.dict('os.environ', {}, clear=True):
-            require_production_confirmation(args)
+        with patch('mcp_server.commands.run_oc', side_effect=[infrastructure, command_result]):
+            self.assertEqual(detect_cluster_name(), 'crc')
+    def test_cluster_name_from_api_server_is_safe(self):
+        self.assertEqual(cluster_name_from_api_server('https://api.crc.testing:6443'), 'crc')
+        self.assertEqual(cluster_name_from_api_server('https://api.cluster-prd.example.com:6443'), 'cluster-prd')
+        self.assertEqual(cluster_name_from_api_server(''), 'openshift-cluster')
+    def test_codebase_does_not_use_forbidden_execution_apis(self):
+        root = Path(__file__).resolve().parents[1]
+        forbidden = ['shell=True', 'os.system', 'os.popen', 'eval(']
+        checked = []
+        for base in ['mcp_server', 'scripts']:
+            for path in (root / base).rglob('*'):
+                if path.is_file() and path.suffix in {'.py', '.sh'}:
+                    checked.append(path)
+                    text = path.read_text(encoding='utf-8', errors='ignore')
+                    for token in forbidden:
+                        self.assertNotIn(token, text, f'{token} encontrado em {path}')
+        text = (root / 'openshift-aiops').read_text(encoding='utf-8', errors='ignore')
+        for token in forbidden:
+            self.assertNotIn(token, text, f'{token} encontrado em openshift-aiops')
+        self.assertTrue(checked)
 if __name__ == '__main__': unittest.main()

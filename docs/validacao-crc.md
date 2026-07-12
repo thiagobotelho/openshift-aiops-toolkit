@@ -1,85 +1,131 @@
-# Validação CRC
+# Validação CRC/OpenShift Local
 
-- Data: 2026-07-11
-- Status: PASSOU COM RESSALVAS
-- Ambiente: CRC/OpenShift Local usado exclusivamente como laboratório
+Este documento descreve a validação consultiva do toolkit em CRC/OpenShift Local usando o contexto atual do `oc`.
 
-## Confirmação do ambiente
+## Última validação
 
-Sinais confirmados:
+- Data: 2026-07-12
+- Contexto: `crc-admin`
+- API: `https://api.crc.testing:6443`
+- Usuário: `kubeadmin`
+- OpenShift: `4.22.1`
+- Cluster detectado: `crc-tg922`
+- Resultado: **APROVADO PARA LABORATÓRIO COM RESSALVAS**
+- Relatório: `relatorios/validacao-consultiva-crc-20260712.md`
+- Must-gather: `docs/validacao-must-gather-crc-20260712.md`
 
-- `crc status`: CRC VM Running e OpenShift Running;
-- versão OpenShift Local: 4.22.1;
-- contexto: `default/api-crc-testing:6443/kubeadmin`;
-- API: `https://api.crc.testing:6443`;
-- Infrastructure: `crc-tg922`;
-- topologia: `SingleReplica`;
-- `oc auth can-i get pods --all-namespaces`: yes;
-- `oc auth can-i get clusteroperators`: yes;
-- `oc auth can-i get nodes`: yes.
+Ressalvas principais:
 
-## Variáveis usadas no ambiente de validação
+- na sessão Codex, `oc` não estava no `PATH`; foi usado `OPENSHIFT_AIOPS_OC_BIN`;
+- `scripts/resumo-saude.sh` cria coleta consultiva local em `evidencias/`;
+- `health` ainda não transforma `Upgradeable=False` em alerta;
+- RBAC limitado não foi exercitado porque o usuário atual é `kubeadmin`.
+
+## Must-gather validado
+
+O fluxo de must-gather foi validado em 2026-07-12 com confirmação explícita `crc-tg922`.
+
+Resumo:
+
+- exit code: `0`;
+- duração: `37.907s`;
+- arquivos brutos: `4331`;
+- tamanho bruto aproximado: `199441515 bytes`;
+- checksums: PASSOU;
+- análise offline: PASSOU;
+- pods/namespaces residuais `must-gather`: não encontrados.
+
+Detalhes: `docs/validacao-must-gather-crc-20260712.md`.
+
+## Pré-check humano
+
+Confirme no terminal:
+
+```bash
+crc status
+oc config current-context
+oc whoami
+oc whoami --show-server
+```
+
+O toolkit não executa `oc login` e não troca contexto.
+
+## Variáveis opcionais para ambiente isolado
+
+Use apenas quando o `oc` estiver no host e o toolkit estiver rodando em ambiente isolado:
 
 ```bash
 export OPENSHIFT_AIOPS_COMMAND_PREFIX="flatpak-spawn --host"
-export OPENSHIFT_AIOPS_OC_BIN="<caminho-do-oc-do-crc>"
+export OPENSHIFT_AIOPS_OC_BIN="<caminho-real-do-oc>"
 ```
 
-## Comandos executados
+## Validação offline
+
+Não acessa a API do OpenShift:
 
 ```bash
-scripts/preflight.sh --environment laboratory --cluster crc-lab --timeout 60
-scripts/validar-contexto.sh --environment laboratory --cluster crc-lab --timeout 60
-scripts/coletar-cluster.sh --environment laboratory --cluster crc-lab --output-dir evidencias --timeout 60
-scripts/diagnosticar-operator.sh authentication --environment laboratory --cluster crc-lab --timeout 60
-scripts/diagnosticar-node.sh crc --environment laboratory --cluster crc-lab --timeout 60
-scripts/diagnosticar-namespace.sh openshift-console --environment laboratory --cluster crc-lab --timeout 60
-scripts/diagnosticar-pod.sh openshift-console console-648cfb69b5-rf2mz --environment laboratory --cluster crc-lab --tail 100 --timeout 60
-scripts/diagnosticar-workload.sh openshift-console console --kind deployment --environment laboratory --cluster crc-lab --timeout 60
-scripts/diagnosticar-storage.sh --environment laboratory --cluster crc-lab --timeout 60
-scripts/diagnosticar-network.sh --environment laboratory --cluster crc-lab --timeout 60
-scripts/diagnosticar-ingress.sh --environment laboratory --cluster crc-lab --timeout 60
-scripts/diagnosticar-dns.sh --environment laboratory --cluster crc-lab --timeout 60
-scripts/diagnosticar-olm.sh --environment laboratory --cluster crc-lab --timeout 60
-scripts/diagnosticar-monitoring.sh --environment laboratory --cluster crc-lab --timeout 60
-scripts/verificar-capacidade.sh --environment laboratory --cluster crc-lab --timeout 60
+make check
+tests/run.sh
+bash tests/test_scripts.sh
 ```
 
-## Evidências
+## Validação consultiva no CRC
 
-- Coleta geral: `evidencias/crc-lab/20260711-143517/`;
-- Coletas direcionadas: `evidencias/targeted/20260711-143727-*` até `evidencias/targeted/20260711-143732-*`;
-- Relatório: `relatorios/validacao-crc-20260711-144131.md`;
-- Validação MCP: `relatorios/validacao-mcp-crc-20260711-143918.json`.
-- Must-gather controlado: `evidencias/<cluster>/<timestamp>/must-gather/`;
-- Análise offline do must-gather: `relatorios/analise-must-gather-crc-<timestamp>.md`.
+Execute somente depois de confirmar que o contexto atual aponta para o CRC desejado:
 
-## Validações
+```bash
+make check-cluster
+./openshift-aiops health
+./openshift-aiops cluster
+./openshift-aiops operators
+./openshift-aiops nodes
+./openshift-aiops pods
+./openshift-aiops storage
+./openshift-aiops network
+./openshift-aiops ingress
+./openshift-aiops dns
+./openshift-aiops monitoring
+./openshift-aiops olm
+./openshift-aiops certificates
+./openshift-aiops capacity
+./openshift-aiops events
+```
 
-| Item | Resultado |
-|----|----|
-| criação de diretórios | PASSOU |
-| manifesto JSON | PASSOU |
-| checksums SHA256 | PASSOU |
-| exit codes da coleta geral | PASSOU |
-| sanitização | PASSOU |
-| ausência de conteúdo de Secrets | PASSOU |
-| ausência de kubeconfig | PASSOU |
-| logs limitados de Pod | PASSOU |
-| logs anteriores de Pod | PASSOU COM RESSALVA: não existiam logs anteriores |
-| must-gather controlado | PASSOU |
-| checksums do must-gather | PASSOU |
-| análise offline do must-gather | PASSOU COM RESSALVA: dados brutos são confidenciais |
+Valide formatos:
 
-## Achados
+```bash
+./openshift-aiops health --output json
+./openshift-aiops health --output markdown
+NO_COLOR=1 ./openshift-aiops health
+./openshift-aiops health --ascii
+./openshift-aiops health --quiet
+./openshift-aiops health --verbose
+```
 
-- ClusterVersion `Upgradeable=False` por motivos esperados no laboratório: overrides do ClusterVersion e operadores com limite máximo de OCP 4.22.
-- Usuário de validação: `kubeadmin`, com permissões amplas; a segurança do teste dependeu do modo read-only do toolkit.
-- Must-gather gerou indicadores de possível sensibilidade; isso é esperado e reforça que `evidencias/**` não deve ser versionado nem publicado.
+## Coleta de evidências
 
-## Comandos não executados
+```bash
+./openshift-aiops collect
+LATEST="$(ls -dt evidencias/*/* | head -1)"
+scripts/gerar-relatorio.sh --path "$LATEST" --output relatorios/relatorio-diagnostico.md
+```
+
+## Must-gather
+
+Não faz parte da validação básica. Só execute com autorização explícita:
+
+```bash
+make must-gather-preflight
+make must-gather
+```
+
+Será exigida confirmação digitando o identificador do cluster.
+
+## Comandos não permitidos durante a validação
 
 - qualquer `oc apply/create/delete/patch/edit`;
 - `oc exec`, `oc debug`, `oc rsh`;
 - criação de Pods temporários;
-- acesso ao conteúdo de Secrets.
+- acesso ao conteúdo de Secrets;
+- troca de contexto;
+- must-gather sem autorização separada.

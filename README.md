@@ -1,39 +1,39 @@
 # OpenShift AIOps Toolkit
 
-Plataforma profissional, local e somente leitura para diagnóstico, coleta de evidências, análise operacional e assistência por IA em Red Hat OpenShift Container Platform.
+Toolkit local, consultivo e somente leitura para diagnosticar clusters Red Hat OpenShift, coletar evidências sanitizadas, gerar relatórios e expor ferramentas MCP específicas para uso com Codex.
 
-## Objetivo e público-alvo
+O modelo operacional padrão é simples: o toolkit usa o contexto atual já autenticado no `oc`. Ele não exige ambiente, nome lógico do cluster, inventário, token no terminal nem confirmação de produção para consultas read-only.
 
-Atender equipes de Operações, Infraestrutura, DevOps, SRE, Plataforma, Segurança e sustentação OpenShift em clusters de desenvolvimento, homologação, produção, cloud, on-premises, compactos, SNO, gerenciados e CRC/laboratório.
+## Objetivo
 
-## Benefícios
-
-- Diagnóstico padronizado e reproduzível.
-- Multi-cluster com contexto explícito.
-- Evidências sanitizadas e empacotáveis.
-- Relatórios técnicos e executivos em Markdown.
-- MCP `openshift-readonly` para Codex, sem terminal genérico.
+Atender equipes de Operações, Infraestrutura, DevOps, SRE, Plataforma, Segurança e sustentação OpenShift em CRC/OpenShift Local, clusters on-premises, clusters compactos, SNO, ambientes gerenciados e clusters cloud.
 
 ## Arquitetura
 
 ```mermaid
 flowchart LR
-  Operador --> Codex[Codex opcional]
+  Operador --> CLI[openshift-aiops]
   Operador --> Scripts[Scripts Bash]
-  Codex --> MCP[MCP openshift-readonly]
-  Scripts --> Python[Python toolkit]
+  Codex[Codex opcional] --> MCP[MCP openshift-readonly]
+  CLI --> Python[Python toolkit]
+  Scripts --> Python
   MCP --> Python
-  Python --> Contexto[Validação de contexto]
-  Contexto --> Allowlist[Allowlist read-only]
+  Python --> Contexto[Contexto atual do oc]
+  Contexto --> Identidade[Identidade do cluster]
+  Identidade --> Capacidades[Descoberta de APIs e permissões]
+  Capacidades --> Allowlist[Allowlist somente leitura]
   Allowlist --> API[OpenShift API]
-  API --> Evidencias[Evidências]
-  Evidencias --> Sanitizacao[Sanitização]
-  Sanitizacao --> Relatorios[Relatórios]
+  API --> Saida[Saída humana / JSON / YAML / Markdown]
+  API --> Evidencias[Evidências sanitizadas]
 ```
 
 ## Pré-requisitos
 
-Bash, Python 3.10+, `oc`, `jq`, `tar`, `gzip` e `sha256sum`. Opcionais: Codex CLI, `yq`, Podman e CRC.
+- Bash;
+- Python 3.10+;
+- `oc` autenticado no cluster desejado;
+- `jq`, `tar`, `gzip` e `sha256sum`;
+- opcionais: Codex CLI, `yq`, Podman e CRC/OpenShift Local.
 
 ## Instalação
 
@@ -43,79 +43,123 @@ cd openshift-aiops-toolkit
 scripts/install.sh
 ```
 
-## Configuração e inventário
+## Uso rápido
+
+Valide primeiro qual cluster está ativo no seu terminal:
 
 ```bash
-cp .env.example .env
-cp inventories/clusters.example.yaml inventories/clusters.yaml
+oc whoami
+oc whoami --show-server
+oc config current-context
 ```
 
-Nunca armazene tokens no inventário. Use kubeconfig já autenticado com permissão somente leitura.
+Execute o diagnóstico resumido:
 
-Quando o toolkit roda dentro de um ambiente isolado, como VS Code/Flatpak, mas o `oc` está no host, configure:
+```bash
+./openshift-aiops health
+```
+
+Comandos equivalentes via Makefile:
+
+```bash
+make health
+make cluster
+make operators
+make nodes
+make pods
+make storage
+make network
+make ingress
+make dns
+make monitoring
+make olm
+make certificates
+make capacity
+make events
+```
+
+O toolkit nunca executa `oc login` nem `oc config use-context`; qualquer `--context` ou `--kubeconfig` informado vale apenas para o processo atual.
+
+## Saídas
+
+Modo humano é o padrão:
+
+```bash
+./openshift-aiops health
+```
+
+Formatos estruturados:
+
+```bash
+./openshift-aiops health --output json
+./openshift-aiops health --output yaml
+./openshift-aiops health --output markdown
+NO_COLOR=1 ./openshift-aiops health
+./openshift-aiops health --ascii
+./openshift-aiops health --quiet
+./openshift-aiops health --verbose
+```
+
+Problemas de saúde do cluster não são tratados automaticamente como falha técnica da ferramenta. Por exemplo, um Operator degradado aparece como achado, mas o comando pode retornar sucesso porque a consulta foi executada.
+
+## Opções avançadas
+
+Use somente quando precisar consultar outro contexto sem alterar o contexto persistente:
+
+```bash
+./openshift-aiops health --context outro-contexto
+./openshift-aiops health --kubeconfig /caminho/kubeconfig
+./openshift-aiops health --timeout 90
+```
+
+Parâmetros antigos continuam aceitos temporariamente por compatibilidade, mas estão obsoletos:
+
+- `--environment`;
+- `--cluster`;
+- `--confirm-production`;
+- variáveis `OPENSHIFT_AIOPS_ENVIRONMENT`, `OPENSHIFT_AIOPS_CLUSTER` e `OPENSHIFT_AIOPS_PRODUCTION_CONFIRM`.
+
+Eles não são mais pré-requisito para diagnósticos comuns. O cluster é identificado pelo contexto atual, API e objeto `Infrastructure`.
+
+## Ambiente isolado ou Flatpak
+
+Quando o toolkit roda em um ambiente isolado e o `oc` está disponível no host, configure:
 
 ```bash
 export OPENSHIFT_AIOPS_COMMAND_PREFIX="flatpak-spawn --host"
-export OPENSHIFT_AIOPS_OC_BIN="$HOME/.crc/cache/crc_libvirt_4.22.1_amd64/oc"
+export OPENSHIFT_AIOPS_OC_BIN="/caminho/real/do/oc"
 ```
 
 O prefixo aceito é restrito por allowlist; não há shell arbitrário.
 
-## Uso em cluster único
+## Inventários opcionais
 
-```bash
-scripts/preflight.sh --offline
-make check-cluster
-scripts/validar-contexto.sh
-scripts/coletar-cluster.sh
-LATEST="$(ls -dt evidencias/*/* | head -1)"
-scripts/gerar-relatorio.sh --path "$LATEST"
-```
-
-`scripts/preflight.sh --offline` e `make check` não acessam a API OpenShift. Use `make check-cluster` apenas depois de confirmar que o contexto atual é o cluster esperado.
-
-Por padrão, os scripts imprimem uma saída resumida para operador humano. Para automação ou debug, adicione `--json` ou `--verbose` nos comandos suportados.
-
-## Uso em múltiplos clusters
+Os arquivos em `inventories/` podem ser usados como aliases, metadados, comparação de clusters ou automações corporativas, mas não são exigidos para uso normal:
 
 ```bash
 scripts/listar-clusters.sh
-scripts/coletar-cluster.sh --cluster cluster-hml --context hml-context --environment homologation
 ```
 
-O modo simples usa o contexto atual do `oc`. Para auditoria, inventário, múltiplos clusters ou produção, informe `--cluster`, `--context` e `--environment` explicitamente. O toolkit não troca contexto silenciosamente.
+Não armazene tokens, senhas ou kubeconfigs completos em inventários.
 
-## Produção
+## Evidências e relatórios
 
-Em produção, confirme explicitamente cluster, API, usuário, versão e infraestrutura. O toolkit é assistivo; remediações seguem gestão de mudança externa.
-
-## Codex e MCP
+Coleta consultiva do cluster atual:
 
 ```bash
-scripts/configurar-codex-mcp.sh
-codex mcp list
+./openshift-aiops collect
+# ou
+scripts/coletar-cluster.sh
 ```
 
-Configuração manual: `.codex/config.toml.example`.
+Gere relatório a partir da última coleta:
 
-O script de configuração do MCP mostra o comando e pede confirmação antes de alterar a configuração do Codex. Use `scripts/configurar-codex-mcp.sh --yes` somente em automação consciente.
+```bash
+LATEST="$(ls -dt evidencias/*/* | head -1)"
+scripts/gerar-relatorio.sh --path "$LATEST" --output relatorios/relatorio-diagnostico.md
+```
 
-As ferramentas MCP aceitam parâmetros comuns opcionais para auditoria e segurança:
-
-- `environment`: `current`, `development`, `homologation`, `laboratory` ou `production`;
-- `cluster`: nome lógico do cluster;
-- `timeout`: limite da consulta em segundos;
-- `confirm_production`: obrigatório quando `environment=production`.
-
-## Scripts principais
-
-- `preflight.sh`: valida dependências, contexto, API e permissões.
-- `coletar-cluster.sh`: coleta evidências gerais.
-- `diagnosticar-pod.sh`, `diagnosticar-operator.sh`, `diagnosticar-node.sh`: investigação direcionada.
-- `gerar-relatorio.sh`: cria relatório Markdown.
-- `sanitizar-evidencias.sh` e `empacotar-evidencias.sh`: preparo para compartilhamento.
-
-## Evidências
+Estrutura esperada:
 
 ```text
 evidencias/<cluster>/<YYYYMMDD-HHMMSS>/
@@ -125,60 +169,84 @@ evidencias/<cluster>/<YYYYMMDD-HHMMSS>/
   checksums.sha256
 ```
 
-## Segurança e RBAC
+## Segurança
 
-Não coleta conteúdo de Secrets, não altera recursos, bloqueia verbos de escrita, sanitiza credenciais e não expõe terminal genérico no MCP. Exemplo documental: `docs/examples/rbac-readonly-example.yaml`.
+- Somente leitura por allowlist de comandos `oc`.
+- Sem `oc apply`, `oc patch`, `oc delete`, `oc exec`, `oc debug`, `oc rsh`, `oc port-forward` ou equivalentes.
+- Sem ferramenta MCP genérica de terminal.
+- Sem leitura de conteúdo de Secrets.
+- Sanitização de tokens, JWTs, Authorization headers, senhas e chaves.
+- Timeout e truncamento de saída.
+- Recursos opcionais ausentes são tratados como `NÃO APLICÁVEL`, `SEM PERMISSÃO` ou `INDISPONÍVEL`.
 
 ## Must-gather
 
-`coletar-must-gather.sh` executa uma coleta controlada para laboratório/produção autorizada. A coleta pode gerar pacote grande e sensível, usa `umask 077`, grava em `evidencias/<cluster>/<timestamp>/must-gather/`, preserva `raw/`, gera manifesto, SHA256, marcador `DO-NOT-COMMIT.txt` e não faz upload.
+`must-gather` é exceção operacional: ele pode criar recursos temporários e coletar dados sensíveis. Por isso exige confirmação digitando o identificador do cluster, independentemente de o cluster ser laboratório, produção ou qualquer outro ambiente.
 
-Fluxo recomendado:
+Preflight:
 
 ```bash
 make must-gather-preflight
+```
+
+Execução somente após autorização humana explícita:
+
+```bash
 make must-gather
-MUST_GATHER="$(ls -dt evidencias/*/*/must-gather | head -1)"
-make analyze-must-gather RESOURCE="$MUST_GATHER"
 ```
 
-Para auditoria ou produção, informe explicitamente `ENVIRONMENT` e `CLUSTER`:
+O resultado é confidencial, gravado em `evidencias/<cluster>/<timestamp>/must-gather/`, com `umask 077`, manifesto, checksums, diretório bruto preservado e marcador `DO-NOT-COMMIT.txt`.
+
+Validação em CRC/OpenShift Local: [docs/validacao-must-gather-crc-20260712.md](docs/validacao-must-gather-crc-20260712.md).
+
+## Codex e MCP
 
 ```bash
-make must-gather-preflight ENVIRONMENT=production CLUSTER=<nome-do-cluster>
-make must-gather ENVIRONMENT=production CLUSTER=<nome-do-cluster>
+scripts/configurar-codex-mcp.sh
+codex mcp list
 ```
 
-O diretório bruto é classificado como confidencial e não deve ser publicado.
+O servidor `openshift-readonly` publica ferramentas específicas, sem terminal genérico. Parâmetros comuns opcionais:
 
-## Limitações
+- `context`;
+- `kubeconfig`;
+- `timeout`;
+- `output`;
+- `verbose`.
 
-Permissões insuficientes reduzem evidências. Métricas dependem da API de métricas. Causa raiz só deve ser declarada com evidência suficiente.
+`environment`, `cluster` e `confirm_production` continuam no schema apenas para compatibilidade e estão marcados como obsoletos.
 
-## Troubleshooting
+## Validação local
+
+Testes offline, sem acessar cluster:
 
 ```bash
-scripts/preflight.sh --offline --verbose
-python3 -m compileall mcp_server
+scripts/preflight.sh --offline
+make check
 tests/run.sh
 ```
 
-Documentos de validação:
+Validação consultiva em cluster atual somente depois de confirmar o contexto:
 
-- `docs/GUIA-PASSO-A-PASSO.md`;
-- `docs/PROCESSO-OPERACIONAL.md`;
-- `docs/auditoria-estatica.md`;
-- `docs/validacao-ambiente-local.md`;
-- `docs/validacao-mcp.md`;
-- `docs/validacao-crc.md`;
-- `docs/matriz-testes.md`;
-- `docs/matriz-compatibilidade.md`;
-- `docs/matriz-mcp-scripts-must-gather.md`;
-- `docs/comparacao-mcp-redhat.md`.
+```bash
+make check-cluster
+./openshift-aiops health
+```
 
-## Roadmap
+## Documentação
 
-Mais correlações, perfis de coleta por domínio e exportadores de relatório.
+- [Guia de migração para contexto automático](docs/migracao-contexto-automatico.md);
+- [Guia passo a passo](docs/GUIA-PASSO-A-PASSO.md);
+- [Processo operacional](docs/PROCESSO-OPERACIONAL.md);
+- [MCP](docs/07-mcp.md);
+- [Must-gather](docs/14-must-gather.md);
+- [Matriz de testes](docs/matriz-testes.md);
+- [Validação CRC](docs/validacao-crc.md).
+- [Validação must-gather CRC](docs/validacao-must-gather-crc-20260712.md).
+
+## Limitações
+
+Permissões insuficientes reduzem evidências. Métricas dependem da Metrics API. Recursos opcionais variam entre CRC, SNO, OCP multinode e clusters gerenciados. Causa raiz só deve ser declarada com evidência suficiente.
 
 ## Referências oficiais
 

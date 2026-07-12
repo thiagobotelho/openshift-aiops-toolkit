@@ -95,15 +95,13 @@ O que faz:
 
 ### 3. Autenticar no cluster fora do toolkit
 
-O login é responsabilidade do operador.
+O login é responsabilidade do operador e acontece fora do toolkit, conforme o procedimento seguro da sua organização. Não salve tokens, kubeconfigs completos ou credenciais no repositório.
 
 ```bash
-oc login --token=<token> --server=<api-server>
 oc whoami
 oc whoami --show-server
+oc config current-context
 ```
-
-O token não deve ser salvo no repo.
 
 ### 4. Validar localmente sem cluster
 

@@ -1,11 +1,11 @@
-# Operação em produção
+# Operação em clusters críticos
 
-Produção exige confirmação explícita, usuário somente leitura e gestão de mudança externa.
+Clusters críticos exigem usuário somente leitura, rastreabilidade, revisão humana e gestão de mudança externa. O toolkit não exige classificação `production` para diagnósticos consultivos; todos os clusters recebem o mesmo bloqueio de escrita.
 
 ## Fluxo recomendado
 
-1. Confirmar ambiente e cluster.
-2. Validar contexto OpenShift e usuário autenticado.
+1. Confirmar o contexto atual do `oc`.
+2. Validar API OpenShift e usuário autenticado.
 3. Executar comandos somente leitura.
 4. Salvar evidências sanitizadas.
 5. Separar fato, hipótese e conclusão.
@@ -23,7 +23,7 @@ flowchart LR
 ## Comandos úteis
 
 ```bash
-scripts/preflight.sh
-scripts/coletar-cluster.sh --cluster cluster-dev --environment development
-scripts/gerar-relatorio.sh --path evidencias/cluster-dev/<coleta>
+./openshift-aiops health
+./openshift-aiops collect
+scripts/gerar-relatorio.sh --path evidencias/<cluster>/<coleta>
 ```

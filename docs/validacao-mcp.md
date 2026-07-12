@@ -17,8 +17,8 @@
 | inicialização STDIO com handshake MCP válido | PASSOU | `initialize` respondeu com `serverInfo` |
 | listagem de ferramentas | PASSOU | 82 ferramentas |
 | schemas específicos por ferramenta | PASSOU | `inputSchema` preservado, sem wrapper genérico `arguments` |
-| parâmetros comuns read-only | PASSOU | `environment`, `cluster`, `timeout` e `confirm_production` publicados nos schemas |
-| bloqueio de produção | PASSOU | `environment=production` exige `confirm_production`, inclusive via variáveis de ambiente |
+| parâmetros comuns read-only | PASSOU | `context`, `kubeconfig`, `timeout`, `output` e `verbose` publicados nos schemas |
+| compatibilidade de parâmetros antigos | PASSOU | `environment`, `cluster` e `confirm_production` aceitos como obsoletos, sem bloquear consultas read-only |
 | chamadas sequenciais STDIO | PASSOU | múltiplas ferramentas chamadas no mesmo processo, aguardando resposta por chamada |
 | E2E STDIO no CRC | PASSOU | 28 ferramentas consultivas, 28 aprovadas |
 | ausência de ferramenta genérica de shell | PASSOU | testes unitários |
@@ -48,7 +48,7 @@
 
 ## Validação consultiva no CRC
 
-Após aprovação explícita, as seguintes ferramentas foram chamadas contra o CRC usando STDIO e SDK MCP:
+Após aprovação explícita, as seguintes ferramentas podem ser chamadas contra o CRC usando STDIO e SDK MCP, sempre com o contexto atual do `oc`:
 
 - `current_context`;
 - `cluster_identity`;

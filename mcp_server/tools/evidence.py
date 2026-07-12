@@ -1,20 +1,22 @@
 from pathlib import Path
-from .base import ToolSpec, name_schema, no_args_schema, ns_name_schema
+from .base import ToolSpec, common_oc_kwargs, name_schema, no_args_schema, ns_name_schema, schema_with_common
 from ..collectors import collect_cluster_evidence, collect_target_evidence, sanitize_evidence_tree
 
 def _collect_cluster(p):
-    path=collect_cluster_evidence(cluster=p.get('cluster','current-cluster'), environment=p.get('environment','current'), output_dir=Path(p.get('output_dir','evidencias')))
+    common = common_oc_kwargs(p)
+    path=collect_cluster_evidence(cluster=p.get('cluster') or 'openshift-cluster', environment=p.get('environment','current'), output_dir=Path(p.get('output_dir','evidencias')), **common)
     return {'evidence_dir': str(path)}
 def _collect_target(target):
     def h(p):
-        path=collect_target_evidence(target=target, namespace=p.get('namespace'), name=p.get('name'), kind=p.get('kind'), output_dir=Path(p.get('output_dir','evidencias')))
+        common = common_oc_kwargs(p)
+        path=collect_target_evidence(target=target, namespace=p.get('namespace'), name=p.get('name'), kind=p.get('kind'), output_dir=Path(p.get('output_dir','evidencias')), **common)
         return {'evidence_dir': str(path)}
     return h
 TOOLS={
-'collect_cluster_evidence': ToolSpec('collect_cluster_evidence','Coleta evidências gerais do cluster.',_collect_cluster,{"type":"object","properties":{"cluster":{"type":"string"},"environment":{"type":"string"},"output_dir":{"type":"string"}},"additionalProperties":False}),
+'collect_cluster_evidence': ToolSpec('collect_cluster_evidence','Coleta evidências gerais do cluster atual.',_collect_cluster,schema_with_common({"output_dir":{"type":"string","description":"diretório local de saída das evidências"}})),
 'collect_namespace_evidence': ToolSpec('collect_namespace_evidence','Coleta evidências de namespace.',_collect_target('namespace'),name_schema('namespace')),
 'collect_pod_evidence': ToolSpec('collect_pod_evidence','Coleta evidências de Pod.',_collect_target('pod'),ns_name_schema('pod')),
-'collect_workload_evidence': ToolSpec('collect_workload_evidence','Coleta evidências de workload.',_collect_target('workload'),{"type":"object","properties":{"namespace":{"type":"string"},"kind":{"type":"string"},"name":{"type":"string"}},"required":["namespace","name"],"additionalProperties":False}),
+'collect_workload_evidence': ToolSpec('collect_workload_evidence','Coleta evidências de workload.',_collect_target('workload'),schema_with_common({"namespace":{"type":"string"},"kind":{"type":"string"},"name":{"type":"string"}}, ["namespace","name"])),
 'collect_operator_evidence': ToolSpec('collect_operator_evidence','Coleta evidências de operador.',_collect_target('operator'),name_schema('operator')),
 'collect_node_evidence': ToolSpec('collect_node_evidence','Coleta evidências de node.',_collect_target('node'),name_schema('node')),
 'collect_storage_evidence': ToolSpec('collect_storage_evidence','Coleta evidências de storage.',_collect_target('storage'),no_args_schema()),

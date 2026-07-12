@@ -81,11 +81,13 @@ Edite apenas valores locais. Não coloque tokens, senhas ou kubeconfig completo 
 
 No modo simples, nenhuma variável é obrigatória. O toolkit usa o contexto atual do `oc` e detecta um nome lógico para salvar as evidências.
 
-Se quiser fixar metadados para auditoria, inventário ou automação, você pode definir:
+Parâmetros como `OPENSHIFT_AIOPS_ENVIRONMENT` e `OPENSHIFT_AIOPS_CLUSTER` existem apenas como metadados opcionais/compatibilidade. Eles não são pré-requisito para diagnosticar o cluster atual.
+
+Se precisar consultar outro contexto sem alterar o kubeconfig persistente, prefira:
 
 ```bash
-export OPENSHIFT_AIOPS_ENVIRONMENT=current
-export OPENSHIFT_AIOPS_CLUSTER=crc-lab
+./openshift-aiops health --context outro-contexto
+./openshift-aiops health --kubeconfig /caminho/kubeconfig
 ```
 
 Quando o toolkit roda em ambiente isolado e o `oc` está disponível no host, configure:
@@ -134,6 +136,7 @@ Depois rode:
 
 ```bash
 make check-cluster
+./openshift-aiops health
 ```
 
 Esse comando é consultivo.
@@ -335,7 +338,8 @@ Ela valida:
 - inicialização do servidor MCP;
 - `tools/list`;
 - schemas específicos;
-- bloqueio de produção sem confirmação;
+- compatibilidade dos parâmetros antigos sem exigir ambiente;
+- proteção específica de must-gather;
 - ausência de ferramenta genérica de shell.
 
 ## 12. Fluxo com Codex + MCP
@@ -438,17 +442,17 @@ scripts/empacotar-evidencias.sh --path evidencias/<cluster>/<timestamp>
 
 Não use isso como garantia absoluta para must-gather bruto. Must-gather precisa de revisão manual antes de compartilhamento.
 
-## 15. Uso em produção
+## 15. Uso em clusters críticos
 
-O ambiente `production` exige confirmação explícita.
+Diagnósticos consultivos usam o contexto atual do `oc` e não exigem `--environment production`. Antes de operar em cluster crítico, confirme contexto, API, usuário e política interna.
 
 Exemplo:
 
 ```bash
-export OPENSHIFT_AIOPS_PRODUCTION_CONFIRM=<nome-do-cluster>
-scripts/preflight.sh \
-  --environment production \
-  --cluster <nome-do-cluster>
+oc config current-context
+oc whoami
+oc whoami --show-server
+./openshift-aiops health
 ```
 
 Regras:
