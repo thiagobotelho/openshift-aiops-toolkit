@@ -153,10 +153,10 @@ scripts/gerar-relatorio.sh \
 
 O que faz:
 
-- cria um relatório Markdown inicial;
-- inclui manifesto sanitizado;
-- aponta onde revisar evidências;
-- não declara causa raiz sem análise humana.
+- cria um relatório Markdown com resumo executivo e achados priorizados;
+- inclui, por achado, sintoma, evidência, causa provável, validação, resolução e confiança;
+- inclui manifesto sanitizado e tabela dos comandos analisados;
+- não declara causa raiz definitiva sem evidência suficiente.
 
 ### 8. Usar runbook quando houver sintoma
 

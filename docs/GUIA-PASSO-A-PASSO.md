@@ -210,7 +210,7 @@ scripts/gerar-relatorio.sh \
   --output relatorios/relatorio-diagnostico.md
 ```
 
-O relatório é um ponto de partida para análise. Ele referencia os artefatos coletados, mas não substitui a leitura dos arquivos de evidência quando houver incidente.
+O relatório lista achados automáticos por severidade e, para cada erro detectado, mostra sintoma, evidência, causa provável, como validar, como resolver e nível de confiança. Ele não substitui a investigação humana quando a causa raiz exigir correlação mais profunda.
 
 ## 8. Diagnósticos direcionados
 
