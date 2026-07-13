@@ -4,7 +4,7 @@ Esta matriz compara as fontes de diagnóstico validadas no CRC/OpenShift Local.
 
 | Domínio | MCP | Scripts | Must-gather | Lacuna | Recomendação |
 |---------|-----|---------|-------------|--------|---------------|
-| identidade | Forte: contexto, usuário, API e versão | Forte no preflight/coleta geral | Forte, com snapshot amplo | MCP nativo não carregou como tool da conversa | Corrigir carregamento da sessão Codex; manter STDIO como teste técnico |
+| identidade | Forte: contexto, usuário, API e versão | Forte no preflight/coleta geral | Forte, com snapshot amplo | Sem lacuna crítica validada | Manter STDIO e Codex nativo como testes complementares |
 | versão | Forte: ClusterVersion | Forte | Forte | Sem parser semântico profundo | Criar parser de condições e histórico |
 | Operators | Forte: lista e JSON | Forte: ClusterOperators e OLM | Forte: objetos e logs relacionados | Correlação automática limitada | Implementar análise por condição `Degraded/Progressing/Available` |
 | nodes | Forte | Forte | Forte | Pouca interpretação de capacidade | Gerar resumo de allocatable/usage |
@@ -29,4 +29,3 @@ Esta matriz compara as fontes de diagnóstico validadas no CRC/OpenShift Local.
 ## Conclusão
 
 O MCP e os scripts são melhores para triagem rápida e reproduzível. O must-gather é melhor para análise profunda e suporte, mas deve ser tratado como confidencial. A estratégia recomendada é usar MCP/scripts primeiro e must-gather apenas quando necessário.
-

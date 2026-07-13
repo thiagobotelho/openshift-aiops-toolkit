@@ -39,6 +39,8 @@ class McpServerProtocolTests(unittest.TestCase):
         self.assertTrue(tools)
         self.assertIn("inputSchema", tools[0])
         self.assertNotEqual(list(tools[0]["inputSchema"].get("properties", {})), ["arguments"])
+        current_context = next(tool for tool in tools if tool["name"] == "current_context")
+        self.assertTrue(current_context["annotations"]["readOnlyHint"])
 
     def test_tool_schemas_accept_common_readonly_parameters(self):
         tools = {tool["name"]: tool for tool in list_tools()}
@@ -52,6 +54,14 @@ class McpServerProtocolTests(unittest.TestCase):
         self.assertIn("metadado opcional", schema["properties"]["environment"].get("description", ""))
         self.assertIn("alias opcional", schema["properties"]["cluster"].get("description", ""))
         self.assertFalse(schema["additionalProperties"])
+
+    def test_tool_annotations_distinguish_readonly_from_local_file_writes(self):
+        tools = {tool["name"]: tool for tool in list_tools()}
+        self.assertTrue(tools["current_context"]["annotations"]["readOnlyHint"])
+        self.assertFalse(tools["current_context"]["annotations"]["destructiveHint"])
+        self.assertTrue(tools["cluster_health"]["annotations"]["idempotentHint"])
+        self.assertFalse(tools["collect_cluster_evidence"]["annotations"]["readOnlyHint"])
+        self.assertFalse(tools["sanitize_evidence"]["annotations"]["readOnlyHint"])
 
     def test_no_generic_shell_tool_is_published(self):
         names = {tool["name"] for tool in list_tools()}

@@ -21,6 +21,7 @@ class ToolSpec:
     description: str
     handler: Handler
     input_schema: dict[str, Any]
+    read_only: bool = True
 COMMON_PROPERTIES={
     "context":{"type":"string","description":"contexto kubeconfig opcional para esta consulta; não altera o contexto persistente"},
     "kubeconfig":{"type":"string","description":"kubeconfig opcional para esta consulta; não é impresso nem persistido"},

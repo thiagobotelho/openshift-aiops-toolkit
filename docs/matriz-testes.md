@@ -5,8 +5,8 @@
 | TST-001 | Inventário | `pwd`, `git status`, `find` | Estático | Local | PASSOU | Fase 0 |
 | TST-002 | Bash | `bash tests/test_scripts.sh` | Estático | Local | PASSOU | saída do comando |
 | TST-003 | Python | `python3 -m compileall -q mcp_server` | Estático | Local | PASSOU | saída do comando |
-| TST-004 | Unitários | `python3 -m unittest discover -s tests -p 'test_*.py'` | Unitário | Local | PASSOU | 48 testes |
-| TST-005 | Unitários venv | `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'` | Unitário | Local | PASSOU | 48 testes via `tests/run.sh` |
+| TST-004 | Unitários | `python3 -m unittest discover -s tests -p 'test_*.py'` | Unitário | Local | PASSOU | 49 testes |
+| TST-005 | Unitários venv | `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'` | Unitário | Local | PASSOU | 49 testes via `tests/run.sh` |
 | TST-006 | Makefile | `make help` | Estático | Local | PASSOU | lista de targets |
 | TST-007 | Preflight offline | `make check` | Funcional offline | Local | PASSOU | modo `offline` |
 | TST-008 | MCP import | importação do servidor | MCP | Local | PASSOU | teste unitário |
@@ -17,7 +17,7 @@
 | TST-013 | CRC identidade | confirmar CRC/local | Consultivo | CRC | PASSOU | `crc status`, API `api.crc.testing` |
 | TST-014 | CRC coleta geral | coleta em `evidencias/<cluster>/<timestamp>` | Consultivo | CRC | PASSOU | `evidencias/crc-lab/20260711-143517/` |
 | TST-015 | MCP consultivo CRC | 15 ferramentas MCP via STDIO | Integração | CRC | PASSOU | `relatorios/validacao-mcp-crc-20260711-143918.json` |
-| TST-016 | Codex + MCP ponta a ponta | diagnóstico via ferramenta MCP carregada pelo Codex CLI | Integração | Codex/CRC | BLOQUEADO PELO CLIENTE CODEX | `codex exec` carregou `openshift-readonly/current_context`, mas a tool call foi cancelada pelo cliente em modo não interativo |
+| TST-016 | Codex + MCP ponta a ponta | diagnóstico via ferramenta MCP carregada pelo Codex CLI | Integração | Codex/CRC | PASSOU | `codex exec --sandbox read-only` chamou `current_context`, `cluster_identity` e `cluster_health` via MCP nativo |
 | TST-017 | MCP parâmetros comuns | schemas aceitam `context`, `kubeconfig`, `timeout`, `output`, `verbose` e parâmetros opcionais de compatibilidade | Unitário | Local | PASSOU | `tests/test_mcp_server.py` |
 | TST-018 | MCP sequencial | múltiplas chamadas STDIO no mesmo processo, aguardando resposta por chamada | Integração | CRC | PASSOU | smoke interativo STDIO |
 | TST-019 | MCP E2E STDIO | 28 ferramentas consultivas no CRC | Integração | CRC | PASSOU | `relatorios/validacao-e2e-codex-mcp-*.md` |
@@ -25,7 +25,7 @@
 | TST-021 | Must-gather full | coleta padrão com `--all-images=false` | Integração | CRC | PASSOU | `evidencias/<cluster>/<timestamp>/must-gather/` |
 | TST-022 | Must-gather checksums | `sha256sum -c` | Integridade | Local | PASSOU | `metadata/checksums.sha256` |
 | TST-023 | Must-gather análise offline | índice técnico e scan de sensibilidade | Segurança | Local | PASSOU | bruto classificado como confidencial e não versionado |
-| TST-024 | MCP nativo da conversa Codex | tools do `openshift-readonly` injetadas na conversa | Integração | Codex | BLOQUEADO PELO CLIENTE CODEX | servidor MCP habilitado; chamada nativa `current_context` cancelada no `codex exec` não interativo |
+| TST-024 | MCP nativo da conversa Codex | tools do `openshift-readonly` injetadas na conversa | Integração | Codex | PASSOU | tool `openshift-readonly/current_context` carregada e concluída pelo Codex CLI |
 | TST-025 | CLI central | `./openshift-aiops --help` não acessa cluster e comandos usam contexto atual | Unitário/CLI | Local | PASSOU | `tests/test_formatters_cli.py` |
 | TST-026 | Saída padronizada | status, JSON, Markdown, tabela e fallback ASCII | Unitário | Local | PASSOU | `tests/test_formatters_cli.py` |
 | TST-027 | Segurança estática | ausência de `shell=True`, `os.system`, `os.popen` e `eval` no código executável | Unitário | Local | PASSOU | `tests/test_commands.py` |

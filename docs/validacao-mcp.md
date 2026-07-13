@@ -1,12 +1,12 @@
 # Validação MCP
 
-- Data: 2026-07-11
+- Data: 2026-07-12
 - Servidor: `openshift-readonly`
 - Transporte: STDIO
 - Resultado local/offline: PASSOU
 - Resultado consultivo no CRC: PASSOU
 - Resultado E2E STDIO no CRC: PASSOU
-- Resultado MCP nativo no Codex CLI: BLOQUEADO PELO CLIENTE CODEX em execução não interativa
+- Resultado MCP nativo no Codex CLI: PASSOU
 
 ## Validações sem cluster
 
@@ -17,10 +17,12 @@
 | inicialização STDIO com handshake MCP válido | PASSOU | `initialize` respondeu com `serverInfo` |
 | listagem de ferramentas | PASSOU | 82 ferramentas |
 | schemas específicos por ferramenta | PASSOU | `inputSchema` preservado, sem wrapper genérico `arguments` |
+| annotations MCP | PASSOU | consultas publicam `readOnlyHint=true`; coletas/sanitização locais não são anunciadas como read-only |
 | parâmetros comuns read-only | PASSOU | `context`, `kubeconfig`, `timeout`, `output` e `verbose` publicados nos schemas |
 | parâmetros opcionais de compatibilidade | PASSOU | `environment`, `cluster` e `confirm_production` aceitos como metadados opcionais, sem bloquear consultas read-only |
 | chamadas sequenciais STDIO | PASSOU | múltiplas ferramentas chamadas no mesmo processo, aguardando resposta por chamada |
 | E2E STDIO no CRC | PASSOU | 28 ferramentas consultivas, 28 aprovadas |
+| MCP nativo no Codex CLI | PASSOU | `codex exec --sandbox read-only` executou `current_context`, `cluster_identity` e `cluster_health` |
 | ausência de ferramenta genérica de shell | PASSOU | testes unitários |
 | validação de parâmetros | PASSOU | testes negativos |
 | sanitização de saída | PASSOU | testes de sanitização |
@@ -70,8 +72,20 @@ Resultado: todas responderam sem erro JSON-RPC e sem timeout.
 
 Evidência: `relatorios/validacao-mcp-crc-20260711-143918.json`.
 
-## Limitação remanescente
+## Validação nativa no Codex CLI
 
-O servidor `openshift-readonly` está habilitado no Codex CLI e o `codex exec` carrega a ferramenta `openshift-readonly/current_context`. No modo não interativo, a chamada da ferramenta é cancelada pelo cliente Codex antes de retornar o contexto.
+O servidor `openshift-readonly` está habilitado no Codex CLI. A validação nativa foi executada com `codex exec --sandbox read-only`, sem shell e sem leitura direta de arquivos pelo agente.
 
-A validação equivalente por STDIO passa com o mesmo servidor `openshift-readonly`, mesmo Python e mesmas variáveis registradas no Codex CLI.
+Ferramentas chamadas:
+
+- `current_context`;
+- `cluster_identity`;
+- `cluster_health`.
+
+Resultado observado:
+
+```json
+{"tools_called":["current_context","cluster_identity","cluster_health"],"all_completed":true,"context":"crc-admin","cluster_name":"crc-tg922","health_status":"unknown","degraded_count":0,"limitations_count":0}
+```
+
+As annotations MCP são publicadas para diferenciar consultas seguras de operações que geram ou alteram arquivos locais de evidência.

@@ -10,7 +10,7 @@
 | P1 | Confirmar localização dos binários `oc` e `crc` no host | Concluído |
 | P1 | Teste ponta a ponta via MCP STDIO | Concluído |
 | P1 | Must-gather controlado no CRC | Concluído |
-| P1 | Teste MCP nativo dentro da conversa Codex | Bloqueado pelo ambiente |
+| P1 | Teste MCP nativo dentro da conversa Codex | Concluído |
 
 ## Recomendadas
 

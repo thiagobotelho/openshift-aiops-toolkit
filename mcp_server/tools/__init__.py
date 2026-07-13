@@ -16,8 +16,24 @@ def get_tool_registry() -> dict[str, ToolSpec]:
     registry.setdefault('service_health', oc_simple('service_health','Services.',['get','services','-A','-o','wide']))
     registry.setdefault('endpoints_health', oc_simple('endpoints_health','Endpoints e EndpointSlices.',['get','endpoints,endpointslices','-A','-o','wide']))
     return registry
+def tool_annotations(spec: ToolSpec) -> dict[str, Any]:
+    return {
+        'readOnlyHint': spec.read_only,
+        'destructiveHint': False,
+        'idempotentHint': spec.read_only,
+        'openWorldHint': True,
+    }
+
 def list_tools() -> list[dict[str, Any]]:
-    return sorted([{'name': s.name, 'description': s.description, 'inputSchema': extend_schema_with_common(s.input_schema)} for s in get_tool_registry().values()], key=lambda x: x['name'])
+    return sorted([
+        {
+            'name': s.name,
+            'description': s.description,
+            'inputSchema': extend_schema_with_common(s.input_schema),
+            'annotations': tool_annotations(s),
+        }
+        for s in get_tool_registry().values()
+    ], key=lambda x: x['name'])
 
 def _result_exit_code(result: dict[str, Any]) -> int | None:
     if isinstance(result.get('exit_code'), int):

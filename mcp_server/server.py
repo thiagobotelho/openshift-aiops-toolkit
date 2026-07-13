@@ -7,13 +7,14 @@ try:
     import anyio
     from mcp.server import Server
     from mcp.server.stdio import stdio_server
-    from mcp.types import TextContent, Tool
+    from mcp.types import TextContent, Tool, ToolAnnotations
 except Exception:
     anyio = None
     Server = None
     stdio_server = None
     TextContent = None
     Tool = None
+    ToolAnnotations = None
 SERVER_NAME='openshift-readonly'
 def _jsonrpc_response(request_id: Any, result: Any = None, error: Any = None) -> dict[str, Any]:
     payload={'jsonrpc':'2.0','id':request_id}
@@ -50,6 +51,7 @@ async def _run_sdk_server() -> None:
                 name=tool['name'],
                 description=tool['description'],
                 inputSchema=tool['inputSchema'],
+                annotations=ToolAnnotations(**tool['annotations']),
             )
             for tool in list_tools()
         ]

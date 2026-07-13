@@ -13,15 +13,15 @@ def _collect_target(target):
         return {'evidence_dir': str(path)}
     return h
 TOOLS={
-'collect_cluster_evidence': ToolSpec('collect_cluster_evidence','Coleta evidências gerais do cluster atual.',_collect_cluster,schema_with_common({"output_dir":{"type":"string","description":"diretório local de saída das evidências"}})),
-'collect_namespace_evidence': ToolSpec('collect_namespace_evidence','Coleta evidências de namespace.',_collect_target('namespace'),name_schema('namespace')),
-'collect_pod_evidence': ToolSpec('collect_pod_evidence','Coleta evidências de Pod.',_collect_target('pod'),ns_name_schema('pod')),
-'collect_workload_evidence': ToolSpec('collect_workload_evidence','Coleta evidências de workload.',_collect_target('workload'),schema_with_common({"namespace":{"type":"string"},"kind":{"type":"string"},"name":{"type":"string"}}, ["namespace","name"])),
-'collect_operator_evidence': ToolSpec('collect_operator_evidence','Coleta evidências de operador.',_collect_target('operator'),name_schema('operator')),
-'collect_node_evidence': ToolSpec('collect_node_evidence','Coleta evidências de node.',_collect_target('node'),name_schema('node')),
-'collect_storage_evidence': ToolSpec('collect_storage_evidence','Coleta evidências de storage.',_collect_target('storage'),no_args_schema()),
-'collect_network_evidence': ToolSpec('collect_network_evidence','Coleta evidências de rede.',_collect_target('network'),no_args_schema()),
+'collect_cluster_evidence': ToolSpec('collect_cluster_evidence','Coleta evidências gerais do cluster atual.',_collect_cluster,schema_with_common({"output_dir":{"type":"string","description":"diretório local de saída das evidências"}}), read_only=False),
+'collect_namespace_evidence': ToolSpec('collect_namespace_evidence','Coleta evidências de namespace.',_collect_target('namespace'),name_schema('namespace'), read_only=False),
+'collect_pod_evidence': ToolSpec('collect_pod_evidence','Coleta evidências de Pod.',_collect_target('pod'),ns_name_schema('pod'), read_only=False),
+'collect_workload_evidence': ToolSpec('collect_workload_evidence','Coleta evidências de workload.',_collect_target('workload'),schema_with_common({"namespace":{"type":"string"},"kind":{"type":"string"},"name":{"type":"string"}}, ["namespace","name"]), read_only=False),
+'collect_operator_evidence': ToolSpec('collect_operator_evidence','Coleta evidências de operador.',_collect_target('operator'),name_schema('operator'), read_only=False),
+'collect_node_evidence': ToolSpec('collect_node_evidence','Coleta evidências de node.',_collect_target('node'),name_schema('node'), read_only=False),
+'collect_storage_evidence': ToolSpec('collect_storage_evidence','Coleta evidências de storage.',_collect_target('storage'),no_args_schema(), read_only=False),
+'collect_network_evidence': ToolSpec('collect_network_evidence','Coleta evidências de rede.',_collect_target('network'),no_args_schema(), read_only=False),
 'generate_evidence_manifest': ToolSpec('generate_evidence_manifest','Manifesto é gerado durante a coleta.',lambda p: {'message':'manifest.json é gerado automaticamente','path':p.get('name','')},name_schema('path')),
-'sanitize_evidence': ToolSpec('sanitize_evidence','Sanitiza evidências locais.',lambda p: {'files_sanitized': sanitize_evidence_tree(Path(p['name']))},name_schema('path')),
-'package_evidence': ToolSpec('package_evidence','Empacota evidências sanitizadas.',lambda p: {'message':'use scripts/empacotar-evidencias.sh','path':p.get('name','')},name_schema('path')),
+'sanitize_evidence': ToolSpec('sanitize_evidence','Sanitiza evidências locais.',lambda p: {'files_sanitized': sanitize_evidence_tree(Path(p['name']))},name_schema('path'), read_only=False),
+'package_evidence': ToolSpec('package_evidence','Empacota evidências sanitizadas.',lambda p: {'message':'use scripts/empacotar-evidencias.sh','path':p.get('name','')},name_schema('path'), read_only=False),
 }
