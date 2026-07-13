@@ -6,7 +6,7 @@
 - Resultado local/offline: PASSOU
 - Resultado consultivo no CRC: PASSOU
 - Resultado E2E STDIO no CRC: PASSOU
-- Resultado MCP nativo na conversa Codex: BLOQUEADO pelo ambiente da sessão
+- Resultado MCP nativo no Codex CLI: BLOQUEADO PELO CLIENTE CODEX em execução não interativa
 
 ## Validações sem cluster
 
@@ -72,4 +72,6 @@ Evidência: `relatorios/validacao-mcp-crc-20260711-143918.json`.
 
 ## Limitação remanescente
 
-As ferramentas MCP não foram injetadas como tools nativas desta conversa Codex. A validação equivalente por STDIO foi executada com sucesso usando o mesmo servidor `openshift-readonly`, mesmo Python e mesmas variáveis registradas no Codex CLI.
+O servidor `openshift-readonly` está habilitado no Codex CLI e o `codex exec` carrega a ferramenta `openshift-readonly/current_context`. No modo não interativo, a chamada da ferramenta é cancelada pelo cliente Codex antes de retornar o contexto.
+
+A validação equivalente por STDIO passa com o mesmo servidor `openshift-readonly`, mesmo Python e mesmas variáveis registradas no Codex CLI.

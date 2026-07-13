@@ -30,6 +30,12 @@ if ! "${PYTHON_BIN}" -c 'import mcp_server.server' >/dev/null 2>&1; then
   echo "Falha ao importar mcp_server.server usando ${PYTHON_BIN}." >&2
   exit 2
 fi
+if [ -z "${OPENSHIFT_AIOPS_OC_BIN:-}" ] && ! command -v oc >/dev/null 2>&1; then
+  CRC_OC="$(find "${HOME}/.crc/cache" -type f -name oc -perm -111 2>/dev/null | sort | tail -1 || true)"
+  if [ -n "${CRC_OC}" ]; then
+    export OPENSHIFT_AIOPS_OC_BIN="${CRC_OC}"
+  fi
+fi
 if codex mcp list 2>/dev/null | grep -q 'openshift-readonly'; then
   if [ "${REPLACE}" = "true" ]; then
     codex mcp remove openshift-readonly

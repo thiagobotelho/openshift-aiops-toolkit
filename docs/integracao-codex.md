@@ -15,16 +15,17 @@
 
 O script `scripts/configurar-codex-mcp.sh`:
 
-- localizar o caminho absoluto do projeto;
-- usar `.venv/bin/python`;
-- validar importação de `mcp_server.server`;
-- mostrar o comando antes de executar;
-- pedir confirmação antes de alterar a configuração;
-- aceitar `--yes` para execução não interativa;
-- aceitar `--replace` para remover e recriar somente `openshift-readonly`;
-- registrar `PYTHONPATH` para permitir import do pacote fora do diretório do repo;
-- registrar `OPENSHIFT_AIOPS_COMMAND_PREFIX` e `OPENSHIFT_AIOPS_OC_BIN` quando definidos;
-- não sobrescrever servidor já existente.
+- localiza o caminho absoluto do projeto;
+- usa `.venv/bin/python`;
+- valida a importação de `mcp_server.server`;
+- mostra o comando antes de executar;
+- pede confirmação antes de alterar a configuração;
+- aceita `--yes` para execução não interativa;
+- aceita `--replace` para remover e recriar somente `openshift-readonly`;
+- registra `PYTHONPATH` para permitir import do pacote fora do diretório do repo;
+- registra `OPENSHIFT_AIOPS_COMMAND_PREFIX` e `OPENSHIFT_AIOPS_OC_BIN` quando definidos;
+- tenta detectar o `oc` do CRC quando `oc` não está no `PATH`;
+- não sobrescreve servidor já existente sem `--replace`.
 
 ## Configuração esperada
 

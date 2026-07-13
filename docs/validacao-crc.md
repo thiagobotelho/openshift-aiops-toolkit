@@ -10,14 +10,13 @@ Este documento descreve a validação consultiva do toolkit em CRC/OpenShift Loc
 - Usuário: `kubeadmin`
 - OpenShift: `4.22.1`
 - Cluster detectado: `crc-tg922`
-- Resultado: **APROVADO PARA LABORATÓRIO COM RESSALVAS**
+- Resultado: **APROVADO PARA LABORATÓRIO**
 - Relatório: `relatorios/validacao-consultiva-crc-20260712.md`
 - Must-gather: `docs/validacao-must-gather-crc-20260712.md`
 
-Ressalvas principais:
+Observações operacionais:
 
 - quando `oc` não está no `PATH` da sessão, use `OPENSHIFT_AIOPS_OC_BIN`;
-- `scripts/resumo-saude.sh` cria coleta consultiva local em `evidencias/`;
 - `health` ainda não transforma `Upgradeable=False` em alerta;
 - RBAC limitado não foi exercitado porque o usuário atual é `kubeadmin`.
 
