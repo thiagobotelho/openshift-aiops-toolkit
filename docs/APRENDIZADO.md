@@ -14,3 +14,7 @@ Consulte primeiro contexto, identidade e capacidades. Ferramentas somente leitur
 6. Defina reversão por recurso/arquivo e preserve dados persistentes antes de mudanças.
 
 Os comentários dos manifests explicam escolhas; não comprovam disponibilidade do componente. Exemplos fora de entradas Kustomize não são implantados automaticamente.
+
+## Compatibilidade do SDK MCP
+
+O servidor usa a API de ferramentas do SDK MCP 1.x. requirements.txt fixa a versão validada e pyproject.toml impede resolver a versão 2 sem migração explícita. Execute o teste de inicialização/catálogo com o SDK instalado; o modo alternativo sem dependência não comprova compatibilidade do SDK.
