@@ -5,6 +5,7 @@ metadata:
   name: openshift-aiops-readonly-example
 rules:
   - apiGroups: [""]
+    # Recursos ou dependências desta seção; avaliar seu escopo antes de alterar.
     resources: ["pods", "pods/log", "pods/status", "services", "endpoints", "events", "namespaces", "nodes", "persistentvolumeclaims", "persistentvolumes"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["route.openshift.io"]

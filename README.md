@@ -253,3 +253,7 @@ Permissões insuficientes reduzem evidências. Métricas dependem da Metrics API
 - Red Hat OpenShift Documentation: https://docs.redhat.com/en/documentation/openshift_container_platform
 - OpenShift CLI: https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/cli_tools/openshift-cli-oc
 - Model Context Protocol: https://modelcontextprotocol.io/
+
+## Aprender a configuração
+
+Consulte o [guia comentado](docs/APRENDIZADO.md) para entender componentes, escolhas, testes positivos/negativos e reversão.

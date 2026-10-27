@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [{name = "OpenShift AIOps Toolkit contributors"}]
-dependencies = ["PyYAML>=6.0", "mcp>=1.0.0"]
+dependencies = ["PyYAML>=6.0", "mcp>=1.30,<2"]
 keywords = ["openshift", "kubernetes", "mcp", "sre", "aiops", "diagnostics"]
 
 [project.scripts]

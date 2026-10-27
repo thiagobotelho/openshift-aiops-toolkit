@@ -1,15 +1,6 @@
-# Integração com Codex CLI
+# Integração MCP
 
-- Data: 2026-07-11
-- Status local: VALIDADO E CONFIGURADO
-
-## Verificações executadas
-
-| Comando | Resultado |
-|----|----|
-| `codex --help` | PASSOU |
-| `codex mcp --help` | PASSOU |
-| `codex mcp list` | PASSOU |
+Configure o cliente somente após conferir caminho do projeto, catálogo e limites de acesso. A configuração local não concede permissões no cluster.
 
 ## Script de configuração
 
