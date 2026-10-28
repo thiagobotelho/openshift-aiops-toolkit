@@ -9,7 +9,7 @@
 - `environment`, `cluster` e `confirm_production` deixaram de ser obrigatórios para consultas read-only e permanecem apenas como compatibilidade obsoleta.
 - Must-gather passou a usar confirmação própria por identificador do cluster, independente de classificação de ambiente.
 - Atualizada documentação principal para instalação e operação baseadas em `oc whoami` e `./openshift-aiops health`.
-- Validado must-gather completo em CRC/OpenShift Local com manifesto, checksums e análise offline segura.
+- Documentado o procedimento must-gather com manifesto, checksums e análise offline segura.
 
 ## 0.1.0 - 2026-07-11
 
@@ -28,7 +28,7 @@
 - Adicionado suporte a `OPENSHIFT_AIOPS_COMMAND_PREFIX` e `OPENSHIFT_AIOPS_OC_BIN` para validação em ambientes isolados usando o `oc` do host.
 - Corrigida colisão de diretórios de evidências direcionadas com timestamp em microssegundos.
 - Adicionados coletores direcionados para storage, network, ingress, DNS, OLM, monitoring, capacidade e certificados.
-- Validação consultiva realizada em CRC/OpenShift Local 4.22.1 sem alterar recursos.
+- Documentada validação consultiva em CRC/OpenShift Local sem alteração de recursos.
 - Ferramentas MCP passaram a publicar parâmetros comuns (`environment`, `cluster`, `timeout`, `confirm_production`) na primeira versão do fluxo multicluster.
 - Implementado fluxo controlado de must-gather com preflight, execução, manifesto, checksums, marcador confidencial e análise offline.
 - Adicionadas matriz MCP/scripts/must-gather e comparação arquitetural com o MCP Server oficial da Red Hat/OpenShift.
