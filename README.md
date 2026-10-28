@@ -197,7 +197,7 @@ make must-gather
 
 O resultado é confidencial, gravado em `evidencias/<cluster>/<timestamp>/must-gather/`, com `umask 077`, manifesto, checksums, diretório bruto preservado e marcador `DO-NOT-COMMIT.txt`.
 
-Validação em CRC/OpenShift Local: [docs/validacao-must-gather-crc-20260712.md](docs/validacao-must-gather-crc-20260712.md).
+Procedimento de coleta e validação: [Must-gather](docs/14-must-gather.md).
 
 ## Codex e MCP
 
@@ -242,7 +242,7 @@ make check-cluster
 - [Must-gather](docs/14-must-gather.md);
 - [Matriz de testes](docs/matriz-testes.md);
 - [Validação CRC](docs/validacao-crc.md).
-- [Validação must-gather CRC](docs/validacao-must-gather-crc-20260712.md).
+- [Procedimento de validação](docs/VALIDACAO.md).
 
 ## Limitações
 

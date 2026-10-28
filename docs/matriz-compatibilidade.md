@@ -1,15 +1,14 @@
-# Matriz de compatibilidade
+# Requisitos e verificação de compatibilidade
 
-| Componente | Versão/estado validado | Resultado | Observação |
-|----|----|----|----|
-| Bash | 5.3.15 | PASSOU | ambiente local |
-| Python | 3.13.14 | PASSOU | acima do mínimo 3.10 |
-| pip | 26.1.2 | PASSOU | ambiente local |
-| SDK MCP | 1.28.1 na `.venv` | PASSOU | instalado pelo `scripts/install.sh` |
-| Codex CLI | disponível | PASSOU | `codex --help` e `codex mcp --help` |
-| `jq` | disponível | PASSOU | ferramenta local |
-| `yq` | ausente | NÃO APLICÁVEL | opcional |
-| `oc` | disponível via `flatpak-spawn --host` e cache CRC 4.22.1 | PASSOU | `OPENSHIFT_AIOPS_OC_BIN` |
-| `crc` | disponível via `flatpak-spawn --host` | PASSOU | CRC Running |
-| OpenShift Local/CRC | 4.22.1 | PASSOU | API `https://api.crc.testing:6443` |
-| OpenShift remoto DEV/HML/PRD | fora de escopo | NÃO APLICÁVEL | não acessar nesta atividade |
+| Componente | Requisito / verificação |
+|---|---|
+| Bash | Confira a versão e execute os testes dos scripts no sistema de destino. |
+| Python | 3.10+; confira requirements.txt e pyproject.toml antes de instalar. |
+| SDK MCP | Use a versão fixada em requirements.txt; valide handshake e catálogo na mesma venv. |
+| oc | Autenticado, no PATH ou configurado por OPENSHIFT_AIOPS_OC_BIN. |
+| CRC | Opcional; confira crc status e a identidade da API quando utilizado. |
+| jq, tar, gzip, sha256sum | Confira disponibilidade com o preflight offline. |
+| Codex CLI / yq / Podman | Opcionais conforme a integração escolhida. |
+| OpenShift | Consulte capacidades e RBAC; APIs opcionais podem estar ausentes. |
+
+Execute o [plano de validação](VALIDACAO.md) no destino. A presença de um binário não comprova compatibilidade do produto nem acesso a todos os recursos. Resultados por versão e evidências pertencem ao registro privado da execução.
